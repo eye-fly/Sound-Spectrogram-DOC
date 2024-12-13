@@ -23,4 +23,6 @@ To achieve the project's goals, the following were implemented:
 
 ## Showcase
 
-pls add hear [Title](doc/IMG_3433.MOV) [Title](doc/IMG_3433.MOV)
+pls add hear [Title](doc/IMG_3433.MOV) [Title](doc/IMG_3433.MOV) but as a playable video with sound
+
+[![Video Title](doc/video_thumbnail.jpg)](doc/IMG_3433.MOV "Click to view video")
