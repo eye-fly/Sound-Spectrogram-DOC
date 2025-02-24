@@ -22,6 +22,8 @@
 MatrixPanel_I2S_DMA *matrix = nullptr;
 VirtualMatrixPanel *dma_display = nullptr;
 
+volatile int brightness = 160;
+
 uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
@@ -59,7 +61,7 @@ void display_init() {
   if (not matrix->begin())
     Serial.println("****** !KABOOM! I2S memory allocation failed ***********");
 
-  matrix->setBrightness8(255);  // range is 0-255, 0 - 0%, 255 - 100%
+  matrix->setBrightness8(brightness);  // range is 0-255, 0 - 0%, 255 - 100%
 
   dma_display = new VirtualMatrixPanel((*matrix), 1, 2, PANEL_WIDTH,
                                        PANEL_HEIGHT, CHAIN_TOP_LEFT_DOWN);
@@ -135,7 +137,7 @@ inline void drew_background_pixel(int x, int y) {
                                back_ground[x][y][2]);
 }
 
-uint8_t blue_grey[3] = {30, 35, 40};
+uint8_t blue_grey[3] = {30, 35, 40};  // {30, 35, 40}
 uint8_t blue[3] = {86, 162, 237};
 void fill_square(int x, int y, int size, uint8_t c[3]) {
   for (int i = 0; i < size; i++) {

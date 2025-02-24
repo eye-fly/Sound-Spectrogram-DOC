@@ -14,6 +14,8 @@
 #include "freertos/task.h"
 #include "menu.h"
 #include "util.hpp"
+///
+#include "color.h"
 
 // i2s audio in
 #define I2S_NUM I2S_NUM_0
@@ -56,11 +58,11 @@ volatile int volue_adjustment = 25;
 volatile int use_log_scale = 3;
 volatile int display_max_f = 650;  // FFT_MAX_F;
 
-#define DEFAULT_BRIGHTNESS 50
-volatile int brightness = 60;
 volatile int falame_colour_enable = 1;
+volatile int flame_gradient_len = 8;
 volatile int miror = 0;
 
+volatile int enable_voc_channel = 0;
 // unsigned int zero_padding = SAMPLES - non_zero_samples;
 
 // double vReal[SAMPLES]; // Array for storing real part of the signal
@@ -79,6 +81,10 @@ int16_t serial_i = 0;
 fft_config_t* fft_analysis =
     fft_init(SAMPLES, FFT_REAL, FFT_FORWARD, NULL, NULL);
 
+RGB voice_C_col = {27, 175, 89};
+RGB mix_C_col = {27, 175, 89};
+RGB mix_flame_C_col = {27, 175, 89};
+
 void menu_setup() {
   soundMenu.listCOntent.push_back(
       new MenuItem("FFT non0 samp", &non_zero_samples,
@@ -88,10 +94,18 @@ void menu_setup() {
   soundMenu.listCOntent.push_back(
       new MenuItem("use log scale", &use_log_scale));
   soundMenu.listCOntent.push_back(new MenuItem("max f", &display_max_f));
+  soundMenu.listCOntent.push_back(
+      new MenuItem("en voc ch", &enable_voc_channel));
+
+  displayMenu.listCOntent.push_back(new ListMenu(
+      "flame eff opt",
+      {new ColorSelectMenu("center col", 99, 175, 89, mix_flame_C_col),
+       new MenuItem("en eff", &falame_colour_enable),
+       new MenuItem("eff grad", &flame_gradient_len)}));
 
   displayMenu.listCOntent.push_back(
-      new MenuItem("flames", &falame_colour_enable));
-  displayMenu.listCOntent.push_back(new MenuItem("brightness", &brightness));
+      new MenuItem("brightness", &brightness, 8,
+                   []() { matrix->setBrightness8(brightness); }));
   displayMenu.listCOntent.push_back(new MenuItem("mirror", &miror, []() {
     if (miror) {
       drewLine(PANE_HEIGHT / 2);
@@ -100,6 +114,8 @@ void menu_setup() {
     }
     print_back_ground();
   }));
+  displayMenu.listCOntent.push_back(
+      new ColorSelectMenu("sd", 99, 175, 89, voice_C_col));
 }
 
 int serial_period = 0;
@@ -449,7 +465,7 @@ int x_max = PANE_WIDTH;
 //   crr_y += (PANE_HEIGHT * (vReal[fft_bucket + 1] * (1.0 - sqew))) / 8;
 //   return crr_y;
 // }
-inline double GetAproxymateYValueFFTOut(int x, int channel, float boost) {
+inline int GetAproxymateYValueFFTOut(int x, int channel, float boost) {
   int max_bucket = (SAMPLES / 2) * display_max_f / (DOWNSAMPLE_RATE / 2);
   int fft_bucket = max_bucket * x / PANE_WIDTH;
   double sqew = 1.0 - ((1.0 * max_bucket * x / PANE_WIDTH) - fft_bucket);
@@ -459,7 +475,11 @@ inline double GetAproxymateYValueFFTOut(int x, int channel, float boost) {
             (fftOut[fftOut_reading][channel][fft_bucket + 1] * (1.0 - sqew)));
   crr_y *= boost;
   crr_y /= 8;
-  return crr_y;
+
+  int crr_y_int = crr_y;
+  crr_y_int = max(0, crr_y_int - 1);
+  crr_y_int = min(PANEL_HEIGHT - 1, crr_y_int);
+  return crr_y_int;
 }
 
 int16_t f_left[PANE_HEIGHT];
@@ -468,12 +488,11 @@ inline void CalkDym(int channel) {
   // Left
   for (int y = 1; y < PANEL_HEIGHT; y++) {
     f_left[y] = 0;
+    f_right[PANE_WIDTH - 1][y] == 0;
   }
   // for (int i = 0; PANE_WIDTH > i; i++)
   // {
-  //   crr_y = GetAproxymateYValueFFTOut(i);
-  //   crr_y = max(0, crr_y - 1);
-  //   crr_y = min(PANEL_HEIGHT - 1, crr_y);
+  //   crr_y = GetAproxymateYValueFFTOut(i);;
 
   //   for (int y = 1; y <= crr_y; y++)
   //   {
@@ -496,20 +515,18 @@ inline void CalkDym(int channel) {
   // }
   // right
   int crr_y;
-  for (int i = PANE_WIDTH - 1; i >= 0; i--) {
+  for (int i = PANE_WIDTH - 2; i >= 0; i--) {
     crr_y = GetAproxymateYValueFFTOut(i, channel, 1.0);
-    crr_y = max(0, crr_y - 1);
-    crr_y = min(PANEL_HEIGHT - 1, crr_y);
 
     for (int y = 1; y <= crr_y; y++) {
       if (i < PANE_WIDTH - 1) {
         f_right[i][y] = f_right[i + 1][y] + 1;
-      } else {
-        f_right[i][y] = 0;
       }
     }
+
     for (int y = crr_y + 1; y < PANEL_HEIGHT; y++) {
       if (i > 0) {
+        if (f_right[i][y] == 0) break;
         f_right[i][y] = 0;
       }
     }
@@ -533,9 +550,11 @@ inline void UpdateDisplay_deactivate_channel(bool mirror, int y_start, int x,
 }
 
 int red_val, green_val, blue_val;
-inline void UpdateDisplay_activate_channel(bool mirror, int y_start, int x,
-                                           int crr_y, bool use_flame) {
+inline void UpdateDisplay_activate_channel(bool mirror, int y_display_start,
+                                           int minimal_y, int x, int crr_y,
+                                           RGB col, bool use_flame) {
   int display_x, display_y_normal, display_y_flip;
+  RGB crr_col = col;
   int toYellow;
   // CalkDym(0);
 
@@ -544,37 +563,32 @@ inline void UpdateDisplay_activate_channel(bool mirror, int y_start, int x,
   // crr_y = (PANE_HEIGHT * vReal[x]) / 8;
 
   // for (int y = 1; y <= crr_y; y++)
-  for (int y = 1; y <= crr_y; y++) {
+  for (int y = minimal_y; y <= crr_y; y++) {
     if (use_flame) {
       f_left[y]++;
+
       toYellow = min(f_left[y], f_right[x][y]) - 4;  // f_right[x][y]
       toYellow = min(toYellow, (2 * y) - 3);
       toYellow = max(toYellow, 0);
-      toYellow = min(toYellow, 8);
-      toYellow *= 10;
-    } else {
-      toYellow = 0;
+      toYellow = min(toYellow, int(flame_gradient_len));
+
+      crr_col = mix(col, mix_flame_C_col, toYellow, flame_gradient_len);
     }
 
-    display_y_flip = PANEL_HEIGHT - 1 - y_start - y;
-    display_y_normal = y_start + y;
+    display_y_flip = PANEL_HEIGHT - 1 - y_display_start - y;
+    display_y_normal = y_display_start + y;
 
     // float brs = 1.0 * brightness / 50;
     // int r = brightness * (140 - (toYellow / 4)) / 50;
 
     if (mirror) {
-      dma_display->drawPixelRGB888(
-          display_x, display_y_normal,
-          brightness * (red_val - (toYellow / 4)) / 50,
-          brightness * (green_val + (toYellow)) / 50,
-          brightness * (blue_val + (toYellow / 10)) / 50);
+      dma_display->drawPixelRGB888(display_x, display_y_normal, crr_col.r,
+                                   crr_col.g, crr_col.b);
       display_y_flip++;
     }
 
-    dma_display->drawPixelRGB888(
-        display_x, display_y_flip, brightness * (red_val - (toYellow / 4)) / 50,
-        brightness * (green_val + (toYellow)) / 50,
-        brightness * (blue_val + (toYellow / 10)) / 50);
+    dma_display->drawPixelRGB888(display_x, display_y_flip, crr_col.r,
+                                 crr_col.g, crr_col.b);
 
     // uint16_t col;
     // dma_display->drawPixel(display_x, display_y, col);
@@ -613,45 +627,45 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
 
       for (int x = 0; x < x_max; x++) {
         crr_y_mix = GetAproxymateYValueFFTOut(x, 0, 1.0);
-        crr_y_mix = max(0, crr_y_mix - 1);
-        crr_y_mix = min(max_y - 1, crr_y_mix);
 
-        crr_y_voc = GetAproxymateYValueFFTOut(x, 1, 1.25);
-        crr_y_voc = max(0, crr_y_voc - 1);
-        crr_y_voc = min(max_y - 1, crr_y_voc);
+        if (enable_voc_channel) {
+          crr_y_voc = GetAproxymateYValueFFTOut(x, 1, 1.25);
+        } else {
+          crr_y_voc = 0;
+        }
 
-        UpdateDisplay_deactivate_channel(mirror, y_start, x, crr_y_mix,
+        UpdateDisplay_deactivate_channel(mirror, y_start, x,
+                                         max(crr_y_mix, crr_y_voc),
                                          display_last_y_pos_mix);
 
-        red_val = 140;
-        green_val = 50;
-        blue_val = 12;
+        // float sat_m = 1.3;
+        // red_val = 140 * sat_m;
+        // green_val = 50 * sat_m;
+        // blue_val = 12 * sat_m;
 
         if (x > 32) {
           if (crr_y_voc == 0 && display_last_y_pos_voc[x] > 0) {
             dma_display->drawPixelRGB888(
-                x, PANE_HEIGHT - 1, brightness * (red_val) / 50,
-                brightness * (green_val) / 50,
-                brightness * (blue_val) / 50);  /// TODO add proper method so
-                                                /// mirror works properly
+                x, PANE_HEIGHT - 1, (mix_C_col.r), (mix_C_col.g),
+                (mix_C_col.b));  /// TODO add proper method so
+                                 /// mirror works properly
           }
-          UpdateDisplay_deactivate_channel(mirror, y_start, x, crr_y_voc,
-                                           display_last_y_pos_voc);
+          display_last_y_pos_voc[x] = crr_y_voc;
+          // UpdateDisplay_deactivate_channel(mirror, y_start, x, crr_y_voc,
+          //                                  display_last_y_pos_voc);
         }
 
-        UpdateDisplay_activate_channel(mirror, y_start, x, crr_y_mix, flame);
+        UpdateDisplay_activate_channel(mirror, y_start, x, crr_y_mix,
+                                       crr_y_voc + 1, mix_C_col, flame);
 
         if (x > 32) {
-          red_val = 20;
-          green_val = 115;
-          blue_val = 50;
-          UpdateDisplay_activate_channel(mirror, y_start, x, crr_y_voc, false);
+          UpdateDisplay_activate_channel(mirror, y_start, x, crr_y_voc, 1,
+                                         voice_C_col, false);
           if (crr_y_voc > 0) {
             dma_display->drawPixelRGB888(
-                x, PANE_HEIGHT - 1, brightness * (red_val) / 50,
-                brightness * (green_val) / 50,
-                brightness * (blue_val) / 50);  /// TODO add proper method so
-                                                /// mirror works properly
+                x, PANE_HEIGHT - 1, voice_C_col.r, voice_C_col.g,
+                voice_C_col.b);  /// TODO add proper method so
+                                 /// mirror works properly
           }
         }
       }

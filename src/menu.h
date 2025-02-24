@@ -12,7 +12,7 @@ volatile int display_update_avg_ms;
 volatile int display_update_max_ms;
 volatile int audio_update_ms;
 static void text(String text, int x, int y, uint16_t col, uint16_t back_col);
-void update__small_num(int n, int x, int y, uint16_t col);
+void update__small_num(uint n, int x, int y, uint16_t col);
 
 void show_update_time() {
   update__small_num(display_update_avg_ms, 0, 1, col_dark_grey);
@@ -188,10 +188,11 @@ void erase_dig(int x, int y) {
     }
   }
 }
-void update__small_num(int n, int x, int y, uint16_t col) {
+void update__small_num(uint n, int x, int y, uint16_t col) {
   int dig_p = 0;
   int diel = 10;
   int d;
+
   while (diel <= n) diel *= 10;
   diel /= 10;
   while (diel >= 1) {
@@ -272,14 +273,7 @@ class ListMenu : public Menu {
   int encoder_selected_item_offset = 0;
 
   int items_count() { return listCOntent.size(); }
-  int y_lenght() override {
-    int lenght = 0;
-    for (int i = crr_y_offset; i < listCOntent.size(); i++) {
-      lenght += listCOntent[i]->y_lenght();
-      lenght += 1;
-    }
-    return lenght - 1;
-  }
+  int y_lenght() override { return 8; }
 
   void short_press(ListMenu* prevList) override {
     /// TODO need to call print content onece and then update but also consider
@@ -379,6 +373,7 @@ class MenuItem : public Menu {
 
   bool pressed = 0;
   int frames_pressed = 0;
+  int encoder_pulse_multiple = 1;  // one move of encoder is equal to this value
   int encoder_offset;
 
   std::function<void()> updateFun = []() {};
@@ -386,8 +381,12 @@ class MenuItem : public Menu {
  public:
   MenuItem(String n) : Menu(n) {}
   MenuItem(String n, volatile int* ref) : Menu(n), val(ref) {}
+  MenuItem(String n, volatile int* ref, int scaler)
+      : Menu(n), val(ref), encoder_pulse_multiple(scaler) {}
   MenuItem(String n, volatile int* ref, std::function<void()> fun)
       : Menu(n), val(ref), updateFun(fun) {}
+  MenuItem(String n, volatile int* ref, int scaler, std::function<void()> fun)
+      : Menu(n), val(ref), updateFun(fun), encoder_pulse_multiple(scaler) {}
   int y_lenght() override { return 7; }
 
   void print(int x, int y, uint16_t col) {
@@ -400,9 +399,11 @@ class MenuItem : public Menu {
   }
 
   void update(int x, int y) override {
-    volatile int new_val = encoder_offset + encoderPos;
-    if (new_val != *val) {
-      (*val) = new_val;
+    volatile int new_val = encoderPos - encoder_offset;
+    new_val *= encoder_pulse_multiple;
+    if (new_val != 0) {
+      encoder_offset = encoderPos;
+      (*val) += new_val;
       updateFun();
       print(x, y, col_bright_white);
     }
@@ -415,7 +416,7 @@ class MenuItem : public Menu {
   void short_press(ListMenu* prevList) override {
     // pressed = 1;
     frames_pressed = 0;
-    encoder_offset = (*val) - encoderPos;
+    encoder_offset = encoderPos;
     returnFun = [prevList]() {
       prevList->zero_encoder_offset();
       prevList->list_selected = 1;
@@ -457,7 +458,7 @@ void update_menu() {
   // crrMenu.selected_item = encoderPos - encoder_selected_offset;
   // crrMenu.selected_item %= crrMenu.items_count();
   if (show_menu) {
-    update__small_num(buttonPressed + 1, 100, 10, col_white);
+    update__small_num(buttonPressed, 100, 10, col_white);
     update__small_num(buttonIsPressed + 1, 100, 16, col_white);
     crrMenu->show_content(140, 1);
   } else if (buttonPressed == 1) {
