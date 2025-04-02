@@ -22,7 +22,7 @@
 MatrixPanel_I2S_DMA *matrix = nullptr;
 VirtualMatrixPanel *dma_display = nullptr;
 
-volatile int brightness = 160;
+volatile int brightness = 180;
 
 uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);

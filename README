@@ -1,0 +1,9 @@
+add "interpolation" with probability density function of normal dist
+use precomputed value
+check if just scaling (x and y) one tamplate is enought
+what to do about drums?
+// main baneffit should be that filltering/ smoting can be applide or peak can
+ be made wider to make them more visible / independent of fft nonzero sample size
+
+
+use to optimize flame

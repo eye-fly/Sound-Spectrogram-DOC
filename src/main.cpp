@@ -52,7 +52,7 @@
 SemaphoreHandle_t mutex;
 TickType_t xBlockTime = pdMS_TO_TICKS(1);
 
-volatile int non_zero_samples = 205;  // 111
+volatile int non_zero_samples = 217;  // 111
 #define DEFAULT_VOLUME_ADJUSTMENT 50
 volatile int volue_adjustment = 25;
 volatile int use_log_scale = 3;
@@ -82,8 +82,10 @@ fft_config_t* fft_analysis =
     fft_init(SAMPLES, FFT_REAL, FFT_FORWARD, NULL, NULL);
 
 RGB voice_C_col = {27, 175, 89};
-RGB mix_C_col = {27, 175, 89};
-RGB mix_flame_C_col = {27, 175, 89};
+RGB mix_C_col = {190, 70, 33};
+RGB mix_flame_C_col = {96, 166, 33};
+// TODO: add dim line colur so its acts dimnamicly (but check how it affect
+// preformance)
 
 void menu_setup() {
   soundMenu.listCOntent.push_back(
@@ -99,7 +101,7 @@ void menu_setup() {
 
   displayMenu.listCOntent.push_back(new ListMenu(
       "flame eff opt",
-      {new ColorSelectMenu("center col", 99, 175, 89, mix_flame_C_col),
+      {new ColorSelectMenu("center col", 55, 170, 80, mix_flame_C_col),
        new MenuItem("en eff", &falame_colour_enable),
        new MenuItem("eff grad", &flame_gradient_len)}));
 
@@ -115,7 +117,9 @@ void menu_setup() {
     print_back_ground();
   }));
   displayMenu.listCOntent.push_back(
-      new ColorSelectMenu("sd", 99, 175, 89, voice_C_col));
+      new ColorSelectMenu("voc col", 99, 175, 89, voice_C_col));
+  displayMenu.listCOntent.push_back(
+      new ColorSelectMenu("mix col", 6, 178, 112, mix_C_col));  // 6
 }
 
 int serial_period = 0;
@@ -567,7 +571,7 @@ inline void UpdateDisplay_activate_channel(bool mirror, int y_display_start,
     if (use_flame) {
       f_left[y]++;
 
-      toYellow = min(f_left[y], f_right[x][y]) - 4;  // f_right[x][y]
+      toYellow = min(f_left[y], f_right[x][y]) - 3;  // f_right[x][y]
       toYellow = min(toYellow, (2 * y) - 3);
       toYellow = max(toYellow, 0);
       toYellow = min(toYellow, int(flame_gradient_len));
@@ -628,7 +632,7 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
       for (int x = 0; x < x_max; x++) {
         crr_y_mix = GetAproxymateYValueFFTOut(x, 0, 1.0);
 
-        if (enable_voc_channel) {
+        if (enable_voc_channel && x > 32) {
           crr_y_voc = GetAproxymateYValueFFTOut(x, 1, 1.25);
         } else {
           crr_y_voc = 0;
@@ -655,11 +659,11 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
           //                                  display_last_y_pos_voc);
         }
 
-        UpdateDisplay_activate_channel(mirror, y_start, x, crr_y_mix,
-                                       crr_y_voc + 1, mix_C_col, flame);
+        UpdateDisplay_activate_channel(mirror, y_start, crr_y_voc + 1, x,
+                                       crr_y_mix, mix_C_col, flame);
 
         if (x > 32) {
-          UpdateDisplay_activate_channel(mirror, y_start, x, crr_y_voc, 1,
+          UpdateDisplay_activate_channel(mirror, y_start, 1, x, crr_y_voc,
                                          voice_C_col, false);
           if (crr_y_voc > 0) {
             dma_display->drawPixelRGB888(

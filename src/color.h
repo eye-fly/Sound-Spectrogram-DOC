@@ -112,14 +112,16 @@ class ColorSelectMenu : public ListMenu {
         ListMenu(n,
                  {new MenuItem("hue", &hue, [this]() { updateRGB(); }),
                   new MenuItem("sat", &sat, [this]() { updateRGB(); }),
-                  new MenuItem("light", &light, [this]() { updateRGB(); })}) {}
+                  new MenuItem("light", &light, [this]() { updateRGB(); })}) {
+    updateRGB();
+  }
 
  private:
   void updateRGB() {
     (*(rgb)) = hsl2rgb(1.0 * hue / 255, 1.0 * sat / 255, 1.0 * light / 255);
-    update__small_num(rgb->r, 120, 25, col_white);
-    update__small_num(rgb->g, 120, 30, col_white);
-    update__small_num(rgb->b, 120, 35, col_white);
+    // update__small_num(rgb->r, 120, 25, col_white);
+    // update__small_num(rgb->g, 120, 30, col_white);
+    // update__small_num(rgb->b, 120, 35, col_white);
   }
 };
 
