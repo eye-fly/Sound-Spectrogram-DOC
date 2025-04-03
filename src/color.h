@@ -109,10 +109,10 @@ class ColorSelectMenu : public ListMenu {
         sat(s),
         light(l),
         rgb(&rgb_col),
-        ListMenu(n,
-                 {new MenuItem("hue", &hue, [this]() { updateRGB(); }),
-                  new MenuItem("sat", &sat, [this]() { updateRGB(); }),
-                  new MenuItem("light", &light, [this]() { updateRGB(); })}) {
+        ListMenu(
+            n, {new MenuItem("hue", &hue, 1, [this]() { updateRGB(); }),
+                new MenuItem("sat", &sat, 1, [this]() { updateRGB(); }),
+                new MenuItem("light", &light, 1, [this]() { updateRGB(); })}) {
     updateRGB();
   }
 

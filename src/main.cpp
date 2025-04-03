@@ -88,8 +88,10 @@ RGB mix_flame_C_col = {96, 166, 33};
 // preformance)
 
 void menu_setup() {
+  mainMenu.listCOntent.push_back(createSavePopup(&mainMenu));
+
   soundMenu.listCOntent.push_back(
-      new MenuItem("FFT non0 samp", &non_zero_samples,
+      new MenuItem("FFT non0 samp", &non_zero_samples, 1,
                    []() { preprocess_windowing(non_zero_samples); }));
   soundMenu.listCOntent.push_back(
       new MenuItem("volume anj", &volue_adjustment));
@@ -108,7 +110,7 @@ void menu_setup() {
   displayMenu.listCOntent.push_back(
       new MenuItem("brightness", &brightness, 8,
                    []() { matrix->setBrightness8(brightness); }));
-  displayMenu.listCOntent.push_back(new MenuItem("mirror", &miror, []() {
+  displayMenu.listCOntent.push_back(new MenuItem("mirror", &miror, 1, []() {
     if (miror) {
       drewLine(PANE_HEIGHT / 2);
     } else {

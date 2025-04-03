@@ -1,3 +1,21 @@
+0. allow saving changes permanently
+
+1. set menu to be undestractable
+
+2. display color in color change menu
+
+3. more custom backgrounds - menu for choosing and adjusting
+
+4. change to 60-50hz
+
+5. check if wif avaiable/how much cost
+    upload img/background
+
+6. what to do with loging\debug and how to encode uploded code
+
+100. QR settings if wifi works
+
+
 add "interpolation" with probability density function of normal dist
 use precomputed value
 check if just scaling (x and y) one tamplate is enought
@@ -7,3 +25,4 @@ what to do about drums?
 
 
 use to optimize flame
+

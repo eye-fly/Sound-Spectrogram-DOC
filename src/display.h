@@ -38,6 +38,7 @@ void print_back_ground();
 void generate_blue_rectangles();
 inline void drew_background_pixel(int x, int y);
 void drewLine(int y);
+int textWidth(String s);
 
 void display_init() {
   HUB75_I2S_CFG mxconfig;
@@ -96,6 +97,11 @@ void display_init() {
   //   Serial.printf("refresh:%d bits:%d\n",
   //   dma_display->calculated_refresh_rate,
   // 0);
+}
+
+int textWidth(String s) {
+  int width = 5 * s.length() + s.length() - 1;
+  return (width > 0) ? width : 0;
 }
 
 volatile int line_y_pos;
