@@ -1,19 +1,32 @@
-0. allow saving changes permanently
+<!-- 0. allow saving changes permanently -->
 
 1. set menu to be undestractable
 
-2. display color in color change menu
+<!-- 2. display color in color change menu -->
+
+2.5 add menu_item limits
 
 3. more custom backgrounds - menu for choosing and adjusting
 
+3.5. colur pair presets
+
 4. change to 60-50hz
+    pritn hub75 display refresh rate
+
+4.1 choose better microcontroller (pobably ESP32-S3)
+
+4.5. add blink/indicator when long press
+    or register longpress as soon as posible (don't whaut for relese)
 
 5. check if wif avaiable/how much cost
     upload img/background
 
 6. what to do with loging\debug and how to encode uploded code
 
-100. QR settings if wifi works
+100. QRcode settings if wifi works
+
+Example psram usage
+uint8_t (*myArray)[60] = (uint8_t (*)[60])ps_malloc(60 * 60 * sizeof(uint8_t));
 
 
 add "interpolation" with probability density function of normal dist

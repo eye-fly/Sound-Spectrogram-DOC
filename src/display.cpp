@@ -1,44 +1,17 @@
-#include <Arduino.h>
-#include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
-#include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
-#include <stdint.h>
-
-#define BCK_H 64
-#define BCK_W (128 * 2)
-
-#define HALFPOINT_WIGGLE 20
-
-// Display
-#define PANEL_WIDTH \
-  128  // Number of pixels wide of each INDIVIDUAL panel module.
-#define PANEL_HEIGHT \
-  64  // Number of pixels tall of each INDIVIDUAL panel module.
-#define PANELS_NUMBER 2
-#define PANE_WIDTH (PANEL_WIDTH * PANELS_NUMBER)
-#define PANE_HEIGHT PANEL_HEIGHT
-#define PIN_E 18
-
-// placeholder for the matrix object
-MatrixPanel_I2S_DMA *matrix = nullptr;
-VirtualMatrixPanel *dma_display = nullptr;
-
+#include "display.h"
 volatile int brightness = 180;
 
-uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
-  return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-}
 uint8_t back_ground[BCK_W][BCK_H][3];
 uint16_t col_black = color565(0, 0, 0);
 uint16_t col_dark_grey = color565(65, 65, 65);
 uint16_t col_white = color565(150, 150, 150);
 uint16_t col_bright_white = color565(180, 180, 180);
 
-void display_init();
-void print_back_ground();
-void generate_blue_rectangles();
-inline void drew_background_pixel(int x, int y);
-void drewLine(int y);
-int textWidth(String s);
+uint8_t blue_grey[3] = {30, 35, 40};  // {30, 35, 40}
+uint8_t blue[3] = {86, 162, 237};
+
+MatrixPanel_I2S_DMA *matrix = nullptr;
+VirtualMatrixPanel *dma_display = nullptr;
 
 void display_init() {
   HUB75_I2S_CFG mxconfig;
@@ -99,11 +72,6 @@ void display_init() {
   // 0);
 }
 
-int textWidth(String s) {
-  int width = 5 * s.length() + s.length() - 1;
-  return (width > 0) ? width : 0;
-}
-
 volatile int line_y_pos;
 void drewLine(int y) {
   // clearLine()
@@ -138,13 +106,6 @@ void print_back_ground() {
   }
 }
 
-inline void drew_background_pixel(int x, int y) {
-  dma_display->drawPixelRGB888(x, y, back_ground[x][y][0], back_ground[x][y][1],
-                               back_ground[x][y][2]);
-}
-
-uint8_t blue_grey[3] = {30, 35, 40};  // {30, 35, 40}
-uint8_t blue[3] = {86, 162, 237};
 void fill_square(int x, int y, int size, uint8_t c[3]) {
   for (int i = 0; i < size; i++) {
     for (int j = 0; j < size; j++) {

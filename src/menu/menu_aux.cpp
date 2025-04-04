@@ -1,8 +1,8 @@
-#include <Arduino.h>
+#include "menu/menu_aux.h"
+
+#include "display.h"
 
 // Define number patterns as 5x3 grids
-const int n_rows = 5;
-const int n_cols = 3;
 const char numbers[10][n_rows][n_cols] = {
     {{'1', '1', '1'},
      {'1', ' ', '1'},
@@ -109,7 +109,7 @@ const uint8_t arrow[7] = {
     0b00100,  // Row 5
     0b00100   // Row 6
 };
-static void draw_arrow(int x, int y, uint16_t color, bool clear) {
+void draw_arrow(int x, int y, uint16_t color, bool clear) {
   for (int row = 0; row < 7; row++) {
     for (int col = 4; col >= 0; col--) {  // 5 columns (bits 4 to 0)
       if (arrow[row] & (1 << col)) {      // Check if the bit is set
@@ -120,5 +120,17 @@ static void draw_arrow(int x, int y, uint16_t color, bool clear) {
         }
       }
     }
+  }
+}
+
+int textWidth(String s) {
+  int width = 5 * s.length() + s.length() - 1;
+  return (width > 0) ? width : 0;
+}
+void text(String text, int x, int y, uint16_t col, uint16_t bac_col) {
+  for (int i = 0; i < text.length(); i++) {
+    char c = text[i];
+    dma_display->drawChar(x, y, c, col, bac_col, 1);
+    x += 6;
   }
 }

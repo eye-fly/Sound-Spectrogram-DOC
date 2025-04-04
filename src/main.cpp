@@ -12,117 +12,22 @@
 #include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "menu.h"
-#include "util.hpp"
+#include "menu/menu_main.h"
+#include "util.h"
 ///
-#include "color.h"
-
-// i2s audio in
-#define I2S_NUM I2S_NUM_0
-#define I2S_BCK_IO 2   // Bit Clock (BCK) pin on ESP32
-#define I2S_WS_IO 32   // Word Select (LRCK) pin on ESP32
-#define I2S_DO_IO 33   // Data Output (DOUT) pin from PCM1808
-#define I2S_MCLK_IO 0  // SCKI system clock output pin
-
-#define MULT 2
-#define CHANNEL_NUMBER 2
-#define SAMPLE_RATE 10000  // 1 kHz sample rate
-#define DOWNSAMPLE_RATE \
-  (350 * MULT * 2)  // 625    // Target sample rate (downsampled)
-#define FFT_MAX_F (350 * MULT)
-#define DOWNSAMPLE_FACTOR \
-  (SAMPLE_RATE / DOWNSAMPLE_RATE)  // Ratio for downsampling (5)
-#define BUFFER_SIZE \
-  (100)  //*10                                // Buffer size for right channel
-         // data
-#define FILTER_ORDER 2  // Order of the low-pass filter (adjustable)
-
-#define DMA_BUF_LEN \
-  BUFFER_SIZE  // TODO delete                     // DMA buffer length (8 * 16)
-
-// FFT
-#define SAMPLES \
-  (128 * MULT * 2)  //(256) // Number of samples (must be a power of 2)
-// #define ZERO_PADDING (145 + 256)  //(128+256)
-// #define WINNDOWING_RATIO 1.0
-// #define DCOFFSET 30420.0
-#define SCALEDOWN ((2 << 20) * MULT)
+#include "envVar.h"
+#include "hardwarePins.h"
+// #include "menu/color.hpp"
 
 // Create a handle for the mutex
 SemaphoreHandle_t mutex;
 TickType_t xBlockTime = pdMS_TO_TICKS(1);
-
-volatile int non_zero_samples = 217;  // 111
-#define DEFAULT_VOLUME_ADJUSTMENT 50
-volatile int volue_adjustment = 25;
-volatile int use_log_scale = 3;
-volatile int display_max_f = 650;  // FFT_MAX_F;
-
-volatile int falame_colour_enable = 1;
-volatile int flame_gradient_len = 8;
-volatile int miror = 0;
-
-volatile int enable_voc_channel = 0;
-// unsigned int zero_padding = SAMPLES - non_zero_samples;
-
-// double vReal[SAMPLES]; // Array for storing real part of the signal
-// double vImag[SAMPLES];
-float fftOut[3][CHANNEL_NUMBER][SAMPLES / 2];
-int fftOut_reading = -1;
-int fftOut_avaiable = 0;
-
-int32_t i2sBuffer[DMA_BUF_LEN * 2];
-
-int16_t serial_i = 0;
 
 /* Create FFT object */
 // ArduinoFFT<double> FFT = ArduinoFFT<double>(vReal, vImag, SAMPLES,
 // DOWNSAMPLE_RATE); Create fft plan and let it allocate arrays
 fft_config_t* fft_analysis =
     fft_init(SAMPLES, FFT_REAL, FFT_FORWARD, NULL, NULL);
-
-RGB voice_C_col = {27, 175, 89};
-RGB mix_C_col = {190, 70, 33};
-RGB mix_flame_C_col = {96, 166, 33};
-// TODO: add dim line colur so its acts dimnamicly (but check how it affect
-// preformance)
-
-void menu_setup() {
-  mainMenu.listCOntent.push_back(createSavePopup(&mainMenu));
-
-  soundMenu.listCOntent.push_back(
-      new MenuItem("FFT non0 samp", &non_zero_samples, 1,
-                   []() { preprocess_windowing(non_zero_samples); }));
-  soundMenu.listCOntent.push_back(
-      new MenuItem("volume anj", &volue_adjustment));
-  soundMenu.listCOntent.push_back(
-      new MenuItem("use log scale", &use_log_scale));
-  soundMenu.listCOntent.push_back(new MenuItem("max f", &display_max_f));
-  soundMenu.listCOntent.push_back(
-      new MenuItem("en voc ch", &enable_voc_channel));
-
-  displayMenu.listCOntent.push_back(new ListMenu(
-      "flame eff opt",
-      {new ColorSelectMenu("center col", 55, 170, 80, mix_flame_C_col),
-       new MenuItem("en eff", &falame_colour_enable),
-       new MenuItem("eff grad", &flame_gradient_len)}));
-
-  displayMenu.listCOntent.push_back(
-      new MenuItem("brightness", &brightness, 8,
-                   []() { matrix->setBrightness8(brightness); }));
-  displayMenu.listCOntent.push_back(new MenuItem("mirror", &miror, 1, []() {
-    if (miror) {
-      drewLine(PANE_HEIGHT / 2);
-    } else {
-      drewLine(PANE_HEIGHT - 1);
-    }
-    print_back_ground();
-  }));
-  displayMenu.listCOntent.push_back(
-      new ColorSelectMenu("voc col", 99, 175, 89, voice_C_col));
-  displayMenu.listCOntent.push_back(
-      new ColorSelectMenu("mix col", 6, 178, 112, mix_C_col));  // 6
-}
 
 int serial_period = 0;
 inline bool UpdateDisplayVar(bool, int, int);

@@ -1,8 +1,7 @@
-#include <Arduino.h>
-
 // #include <cmath>
+#include "util.h"
 
-#include "fft.h"
+#include <Arduino.h>
 
 #define MAX_NON_ZERO_SAMPLES 384
 float windowValues[MAX_NON_ZERO_SAMPLES];
@@ -20,3 +19,6 @@ float get_fft_resoult(fft_config_t *fft_analysis, int i) {
 
   return sqrt(po);
 }
+
+// Returns PDF of normal distribution with max value of 1
+float normalPDF(float x) { return exp(-25 * x * x); }
