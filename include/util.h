@@ -6,7 +6,7 @@
 
 #include "fft.h"
 
-#define MAX_NON_ZERO_SAMPLES 384
+#define MAX_NON_ZERO_SAMPLES 400
 extern float windowValues[MAX_NON_ZERO_SAMPLES];
 
 void preprocess_windowing(unsigned int non_zero_samples);

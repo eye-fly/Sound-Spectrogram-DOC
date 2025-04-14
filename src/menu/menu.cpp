@@ -140,29 +140,54 @@ void ListMenu::print_content(int x, int y) {
 }
 
 // MenuItem =====================
-MenuItem::MenuItem(String n, volatile int* ref, int scaler,
-                   std::function<void()> fun)
-    : Menu(n), val(ref), encoder_pulse_multiple(scaler), updateFun(fun) {
+const char* next_key() {
+  static char key[4] = "0";
+  size_t len = strlen(key);
+
+  if (key[len - 1] == 'z') {
+    if (len + 1 < sizeof(key)) {
+      key[len] = '0';
+      key[len + 1] = '\0';
+    }
+  } else {
+    key[len - 1]++;  // Increment last char (safe)
+  }
+  return key;
+}
+
+MenuItem::MenuItem(String n, volatile int* ref, int val_min, int val_max,
+                   int scaler, std::function<void()> fun)
+    : Menu(n),
+      val(ref),
+      val_min(val_min),
+      val_max(val_max),
+      encoder_pulse_multiple(scaler),
+      updateFun(fun) {
   defoult_val = (*val);
   preferences.begin("options", true);
-  (*val) = preferences.getInt(n.c_str(), defoult_val);
+  pref_key = strdup(next_key());
+  (*val) = preferences.getInt(pref_key, defoult_val);
+  fun();
   preferences.end();
 }
 
 // storing option values ==================================
 void MenuItem::reverse_changes() {
   preferences.begin("options", true);
-  (*val) = preferences.getInt(name.c_str(), defoult_val);
+  (*val) = preferences.getInt(pref_key, defoult_val);
+  updateFun();
   preferences.end();
 }
 void MenuItem::restore_default() {
   (*val) = defoult_val;
+  updateFun();
   // TODO: add notice that this chenge needs to be save if it's supoused to
   // last
 }
 void MenuItem::save_changes() {
   preferences.begin("options", false);
-  preferences.putInt(name.c_str(), (*val));
+  Serial.println(pref_key);
+  preferences.putInt(pref_key, (*val));
   preferences.end();
 }
 // ===============================
@@ -181,6 +206,8 @@ void MenuItem::update(int x, int y) {
   new_val *= encoder_pulse_multiple;
   if (new_val != 0) {
     encoder_offset = encoderPos;
+    new_val = (new_val + *val < val_min) ? val_min - *val : new_val;
+    new_val = (new_val + *val > val_max) ? val_max - *val : new_val;
     (*val) += new_val;
     updateFun();
     print(x, y, col_bright_white);
@@ -237,6 +264,7 @@ void PopupMenu::short_press(ListMenu* prevList) {
   // pressed = 1;
   frames_pressed = 0;
   encoder_offset = encoderPos;
+  selected = 0;
   returnFun = [prevList]() {
     prevList->zero_encoder_offset();
     prevList->list_selected = 1;

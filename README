@@ -1,22 +1,34 @@
-<!-- 0. allow saving changes permanently -->
+bugs:
+     it restarts afther a substaintial working time
 
+
+<!-- 0. allow saving changes permanently -->
+    there is problem with saving colors as all have same name in 'preferences'
 1. set menu to be undestractable
 
+1.5. fix binary-code modulation (rgb(193,0,0) is brighter than rgb(194,0,0)) also 145 brighter that 146
 <!-- 2. display color in color change menu -->
 
-2.5 add menu_item limits
+<!-- 2.5 add menu_item limits -->
+
+2.8. dynamic brightness/lightness(to white)
+2.9.meybe add feading out phase to make movment look smother / pixels aren't turn off instantly but diomed to 5-20%
 
 3. more custom backgrounds - menu for choosing and adjusting
 
 3.5. colur pair presets
 
-4. change to 60-50hz
+4. change to 60-50hz <<==looks like dog shit/ why???
     pritn hub75 display refresh rate
+
+
+4.0. add blink/indicator when long press
+    or register longpress as soon as posible (don't whaut for relese)
+    meybe add adaptive encoder speed
+
 
 4.1 choose better microcontroller (pobably ESP32-S3)
 
-4.5. add blink/indicator when long press
-    or register longpress as soon as posible (don't whaut for relese)
 
 5. check if wif avaiable/how much cost
     upload img/background

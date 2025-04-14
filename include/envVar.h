@@ -3,15 +3,15 @@
 
 #define MULT 2
 #define CHANNEL_NUMBER 2
-#define SAMPLE_RATE 10000  // 1 kHz sample rate
+#define SAMPLE_RATE 10000  // 10 kHz sample rate
 #define DOWNSAMPLE_RATE \
   (350 * MULT * 2)  // 625    // Target sample rate (downsampled)
-#define FFT_MAX_F (350 * MULT)
 #define DOWNSAMPLE_FACTOR \
   (SAMPLE_RATE / DOWNSAMPLE_RATE)  // Ratio for downsampling (5)
 #define BUFFER_SIZE \
-  (100)  //*10                                // Buffer size for right channel
-         // data
+  (166)  // 166  //*10                                // Buffer size for right
+         // channel
+         //  data
 #define FILTER_ORDER 2  // Order of the low-pass filter (adjustable)
 
 #define DMA_BUF_LEN \
@@ -33,6 +33,7 @@ extern volatile int display_max_f;  // FFT_MAX_F;
 
 extern volatile int falame_colour_enable;
 extern volatile int flame_gradient_len;
+extern volatile int flame_gradd_offset;
 extern volatile int miror;
 
 extern volatile int enable_voc_channel;
@@ -47,3 +48,6 @@ extern int fftOut_avaiable;
 extern int32_t i2sBuffer[DMA_BUF_LEN * 2];
 
 extern int16_t serial_i;
+
+// tmp TODO delete
+extern volatile int offset_col;

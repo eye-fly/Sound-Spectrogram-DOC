@@ -10,6 +10,7 @@
 #include "display.h"
 #include "esp_heap_caps.h"
 #include "esp_task_wdt.h"
+#include "fft/display.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "menu/menu_main.h"
@@ -89,6 +90,7 @@ void setup() {
   // Serial.println(free_dma_memory);
   // // esp_intr_dump();
   display_init();
+
   menu_init();
   menu_setup();  // add itemes that change glabal variables
 
@@ -334,48 +336,6 @@ void audio_master() {
 
 int display_period = 0;
 int x_max = PANE_WIDTH;
-// , crr_y;
-// inline void UpdateDisplayHalfRes()
-// {
-//   // if (xSemaphoreTake(mutex, xBlockTime) == pdTRUE)
-//   // {
-//   int nr = fftOut_avaiable;
-//   fftOut_reading = nr;
-//   // xSemaphoreGive(mutex); // Release the mutex
-//   x_max = min(PANE_WIDTH, SAMPLES);
-//   for (int x = 0; x < x_max; x++)
-//   {
-//     if (x % 2 == 0)
-//       crr_y = (PANE_HEIGHT * vReal[x / 2]) / 8;
-//     else
-//       crr_y = (PANE_HEIGHT * (vReal[x / 2] + vReal[(x / 2) + 1]) / 2) / 8;
-//     crr_y = max(0, crr_y - 1);
-//     crr_y = min(PANEL_HEIGHT - 1, crr_y);
-
-//     for (int y = display_last_y_pos[x] + 1; y <= crr_y; y++)
-//     {
-//       dma_display->drawPixelRGB888(x, y, 200, 200, 200);
-//     }
-//     for (int y = display_last_y_pos[x]; y > crr_y; y--)
-//     {
-//       drew_background_pixel(x,y);
-//       // dma_display->drawPixelRGB888(x, y, back_ground[x][y][0],
-//       back_ground[x][y][1], back_ground[x][y][2]);
-//     }
-//     display_last_y_pos[x] = crr_y;
-//   }
-//   // }
-// }
-
-// inline double GetAproxymateYValue(int x)
-// {
-//   int max_bucket = (SAMPLES / 2) * FFT_MAX_F / (DOWNSAMPLE_RATE / 2);
-//   int fft_bucket = max_bucket * x / PANE_WIDTH;
-//   double sqew = 1.0 - ((1.0 * max_bucket * x / PANE_WIDTH) - fft_bucket);
-//   double crr_y = (PANE_HEIGHT * (vReal[fft_bucket] * sqew)) / 8;
-//   crr_y += (PANE_HEIGHT * (vReal[fft_bucket + 1] * (1.0 - sqew))) / 8;
-//   return crr_y;
-// }
 inline int GetAproxymateYValueFFTOut(int x, int channel, float boost) {
   int max_bucket = (SAMPLES / 2) * display_max_f / (DOWNSAMPLE_RATE / 2);
   int fft_bucket = max_bucket * x / PANE_WIDTH;
@@ -401,29 +361,6 @@ inline void CalkDym(int channel) {
     f_left[y] = 0;
     f_right[PANE_WIDTH - 1][y] == 0;
   }
-  // for (int i = 0; PANE_WIDTH > i; i++)
-  // {
-  //   crr_y = GetAproxymateYValueFFTOut(i);;
-
-  //   for (int y = 1; y <= crr_y; y++)
-  //   {
-  //     if (i > 0)
-  //     {
-  //       f_left[i][y] = f_left[i - 1][y] + 1;
-  //     }
-  //     else
-  //     {
-  //       f_left[i][y] = 0;
-  //     }
-  //   }
-  //   for (int y = crr_y + 1; y < PANEL_HEIGHT; y++)
-  //   {
-  //     if (i > 0)
-  //     {
-  //       f_left[i][y] = 0;
-  //     }
-  //   }
-  // }
   // right
   int crr_y;
   for (int i = PANE_WIDTH - 2; i >= 0; i--) {
@@ -460,7 +397,7 @@ inline void UpdateDisplay_deactivate_channel(bool mirror, int y_start, int x,
   display_last_y_pos[x] = crr_y;
 }
 
-int red_val, green_val, blue_val;
+// int red_val, green_val, blue_val;
 inline void UpdateDisplay_activate_channel(bool mirror, int y_display_start,
                                            int minimal_y, int x, int crr_y,
                                            RGB col, bool use_flame) {
@@ -471,19 +408,11 @@ inline void UpdateDisplay_activate_channel(bool mirror, int y_display_start,
 
   display_x = x;
 
-  // crr_y = (PANE_HEIGHT * vReal[x]) / 8;
-
-  // for (int y = 1; y <= crr_y; y++)
   for (int y = minimal_y; y <= crr_y; y++) {
     if (use_flame) {
       f_left[y]++;
 
-      toYellow = min(f_left[y], f_right[x][y]) - 3;  // f_right[x][y]
-      toYellow = min(toYellow, (2 * y) - 3);
-      toYellow = max(toYellow, 0);
-      toYellow = min(toYellow, int(flame_gradient_len));
-
-      crr_col = mix(col, mix_flame_C_col, toYellow, flame_gradient_len);
+      crr_col = flameMix(col, y, min(f_left[y], f_right[x][y]));
     }
 
     display_y_flip = PANEL_HEIGHT - 1 - y_display_start - y;

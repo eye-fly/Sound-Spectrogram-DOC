@@ -45,8 +45,9 @@ inline void drew_background_pixel(int x, int y);
 void drewLine();
 void drewLine(int y);
 
-
 void display_init();
+
+void print_pixel(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b);
 
 inline void drew_background_pixel(int x, int y) {
   dma_display->drawPixelRGB888(x, y, back_ground[x][y][0], back_ground[x][y][1],

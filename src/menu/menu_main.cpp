@@ -37,44 +37,45 @@ void menu_setup() {
                     []() { mainMenu.restore_default(); }));
 
   soundMenu.listCOntent.push_back(
-      new MenuItem("FFT non0 samp", &non_zero_samples, 1,
-                   []() { preprocess_windowing(non_zero_samples); }));
+      new MenuItem("FFT non0 samp", &non_zero_samples, 2, MAX_NON_ZERO_SAMPLES,
+                   1, []() { preprocess_windowing(non_zero_samples); }));
   soundMenu.listCOntent.push_back(
-      new MenuItem("volume anj", &volue_adjustment));
+      new MenuItem("volume anj", &volue_adjustment, 1, 100));
   soundMenu.listCOntent.push_back(
-      new MenuItem("use log scale", &use_log_scale));
-  soundMenu.listCOntent.push_back(new MenuItem("max f", &display_max_f));
+      new MenuItem("use log scale", &use_log_scale, 0, 3));
+  soundMenu.listCOntent.push_back(new MenuItem("max f", &display_max_f, 200,1000,25));
   soundMenu.listCOntent.push_back(
-      new MenuItem("en voc ch", &enable_voc_channel));
-
-  displayMenu.listCOntent.push_back(new ListMenu(
-      "flame eff opt",
-      {new ColorSelectMenu("center col", 55, 170, 80, mix_flame_C_col,
-                           &mix_C_col),
-       new MenuItem("en eff", &falame_colour_enable, 1,
-                    []() { prindColourSample(&mix_C_col); }),
-       new MenuItem(
-           "eff grad", &flame_gradient_len, 1,
-           []() {
-             prindColourSample(&mix_C_col);
-           })},  // TODO needs to be limited to >0 or rash when dividing by 0
-      []() { prindColourSample(&mix_C_col); }));
+      new MenuItem("en voc ch", &enable_voc_channel, 0, 1));
 
   displayMenu.listCOntent.push_back(
-      new MenuItem("brightness", &brightness, 8,
+      new ListMenu("flame eff opt",
+                   {new ColorSelectMenu("center col", 41, 198, 89,
+                                        mix_flame_C_col, &mix_C_col),
+                    new MenuItem("en eff", &falame_colour_enable, 0, 1, 1,
+                                 []() { prindColourSample(&mix_C_col); }),
+                    new MenuItem("eff grad", &flame_gradient_len, 1, 20, 1,
+                                 []() { prindColourSample(&mix_C_col); }),
+                    new MenuItem("eff offset", &flame_gradd_offset, 0, 10, 1,
+                                 []() { prindColourSample(&mix_C_col); })},
+                   []() { prindColourSample(&mix_C_col); }));
+
+  displayMenu.listCOntent.push_back(
+      new MenuItem("brightness", &brightness, 1, 255, 8,
                    []() { matrix->setBrightness8(brightness); }));
-  displayMenu.listCOntent.push_back(new MenuItem("mirror", &miror, 1, []() {
-    if (miror) {
-      drewLine(PANE_HEIGHT / 2);
-    } else {
-      drewLine(PANE_HEIGHT - 1);
-    }
-    print_back_ground();
-  }));
   displayMenu.listCOntent.push_back(
-      new ColorSelectMenu("voc col", 99, 175, 89, voice_C_col));
+      new MenuItem("mirror", &miror, 0, 1, 1, []() {
+        if (miror) {
+          drewLine(PANE_HEIGHT / 2);
+        } else {
+          drewLine(PANE_HEIGHT - 1);
+        }
+        print_back_ground();
+      }));
+
   displayMenu.listCOntent.push_back(
-      new ColorSelectMenu("mix col", 6, 178, 112, mix_C_col));  // 6
+      new ColorSelectMenu("voc col", 99, 175, 89, voice_C_col, &voice_C_col));
+  displayMenu.listCOntent.push_back(
+      new ColorSelectMenu("mix col", 5, 222, 112, mix_C_col));  // 6
 }
 
 bool start = 0;

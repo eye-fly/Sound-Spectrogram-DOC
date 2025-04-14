@@ -2,7 +2,9 @@
 
 #include <Arduino.h>
 
+#include "display.h"
 #include "envVar.h"
+#include "fft/display.h"
 #include "util.h"
 
 RGB voice_C_col = {27, 175, 89};
@@ -90,6 +92,7 @@ RGB hsl2rgb(float h, float s, float l) {
     float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     float p = 2 * l - q;
     result.r = hue2rgb(p, q, h + 1. / 3) * 255;
+    // result.r
     result.g = hue2rgb(p, q, h) * 255;
     result.b = hue2rgb(p, q, h - 1. / 3) * 255;
   }
@@ -103,14 +106,15 @@ ColorSelectMenu::ColorSelectMenu(String n, int h, int s, int l, RGB &rgb_col,
       sat(s),
       light(l),
       rgb(&rgb_col),
-      ListMenu(
-          n,
-          {new MenuItem("hue", &hue, 1, [this]() { updateRGBandPrint(); }),
-           new MenuItem("sat", &sat, 1, [this]() { updateRGBandPrint(); }),
-           new MenuItem("light", &light, 1, [this]() { updateRGBandPrint(); })},
-          [&rgb_col, sampleBase]() {
-            prindColourSample(sampleBase ? sampleBase : &rgb_col);
-          }) {
+      ListMenu(n, {}, [&rgb_col, sampleBase]() {
+        prindColourSample(sampleBase ? sampleBase : &rgb_col);
+      }) {
+  listCOntent.push_back(
+      new MenuItem("hue", &hue, 0, 255, 1, [this]() { updateRGBandPrint(); }));
+  listCOntent.push_back(
+      new MenuItem("sat", &sat, 0, 255, 1, [this]() { updateRGBandPrint(); }));
+  listCOntent.push_back(new MenuItem("light", &light, 0, 255, 1,
+                                     [this]() { updateRGBandPrint(); }));
   updateRGB();
 }
 
@@ -130,32 +134,33 @@ void prindColourSample(RGB *col) {
     int y = max_y * normalPDF((1.0 * x / (max_x / 2)) - 1);
 
     for (int crr_y = 0; y > crr_y; crr_y++) {
-      int toYellow = min(
-          int(last_d_d[crr_y]),
-          (2 * crr_y) -
-              3);  // TODO: implement and use here actual toyellow
-                   // method so the same code isn;t copied in 2 different places
-      toYellow = max(toYellow, 0);
-      toYellow = min(toYellow, int(flame_gradient_len));
+      // int toYellow = min(
+      //     int(last_d_d[crr_y]),
+      //     (2 * crr_y) -
+      //         3);  // TODO: implement and use here actual toyellow
+      //              // method so the same code isn;t copied in 2 different
+      //              places
+      // toYellow = max(toYellow, 0);
+      // toYellow = min(toYellow, int(flame_gradient_len));
 
-      RGB crr_col = mix(*col, mix_flame_C_col, toYellow, flame_gradient_len);
-      dma_display->drawPixelRGB888(start_x + x, start_y - crr_y, crr_col.r,
-                                   crr_col.g, crr_col.b);
-      dma_display->drawPixelRGB888(max_x - x, start_y - crr_y, crr_col.r,
-                                   crr_col.g, crr_col.b);
+      // = mix(*col, mix_flame_C_col, toYellow, flame_gradient_len);
+
+      // RGB crr_col = flameMix(*col, crr_y, last_d_d[crr_y]);
+      RGB crr_col = flameMix(*col, crr_y, 0);
+
+      print_pixel(start_x + x, start_y - crr_y, crr_col.r, crr_col.g,
+                  crr_col.b);
+      print_pixel(max_x - x, start_y - crr_y, crr_col.r, crr_col.g, crr_col.b);
       last_d_d[crr_y] += 1;
     }
   }
   for (int crr_y = 0; max_y > crr_y; crr_y++) {
-    int toYellow = min(int(last_d_d[crr_y]), (2 * crr_y) - 3);
-    toYellow = max(toYellow, 0);
-    toYellow = min(toYellow, int(flame_gradient_len));
+    RGB crr_col = flameMix(*col, crr_y, last_d_d[crr_y]);
 
-    RGB crr_col = mix(*col, mix_flame_C_col, toYellow, flame_gradient_len);
-    dma_display->drawPixelRGB888(start_x + (max_x / 2), start_y - crr_y,
-                                 crr_col.r, crr_col.g, crr_col.b);
-    dma_display->drawPixelRGB888(max_x - (max_x / 2), start_y - crr_y,
-                                 crr_col.r, crr_col.g, crr_col.b);
+    print_pixel(start_x + (max_x / 2), start_y - crr_y, crr_col.r, crr_col.g,
+                crr_col.b);
+    print_pixel(max_x - (max_x / 2), start_y - crr_y, crr_col.r, crr_col.g,
+                crr_col.b);
   }
 }
 
@@ -165,11 +170,11 @@ void ColorSelectMenu::updateRGB() {
 
 void ColorSelectMenu::updateRGBandPrint() {
   ColorSelectMenu::updateRGB();
-
+  // update__small_num(8, 120, 25, col_white);
   prindColourSample(rgb);
-  // update__small_num(rgb->r, 120, 25, col_white);
-  // update__small_num(rgb->g, 120, 30, col_white);
-  // update__small_num(rgb->b, 120, 35, col_white);
+  update__small_num(rgb->r, 120, 25, col_white);
+  update__small_num(rgb->g, 120, 30, col_white);
+  update__small_num(rgb->b, 120, 35, col_white);
 }
 
 // void ColorSelectMenu::print_content(int x, int y) {

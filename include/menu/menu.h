@@ -85,16 +85,19 @@ class MenuItem : public Menu {
  private:
   volatile int* val;
   int defoult_val;
+  int val_min;
+  int val_max;
   bool pressed;
   int frames_pressed;
   int encoder_pulse_multiple;
   int encoder_offset;
   std::function<void()> updateFun;
+  const char* pref_key;
 
  public:
   MenuItem(
-      String n, volatile int* ref = nullptr, int scaler = 1,
-      std::function<void()> fun = []() {});
+      String n, volatile int* ref, int val_min = 0, int val_max = 256,
+      int scaler = 1, std::function<void()> fun = []() {});
 
   // Value management
   void reverse_changes();

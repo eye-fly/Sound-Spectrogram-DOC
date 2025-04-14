@@ -1,4 +1,6 @@
 #include "display.h"
+
+#include "menu/menu_aux.h"
 volatile int brightness = 180;
 
 uint8_t back_ground[BCK_W][BCK_H][3];
@@ -7,11 +9,13 @@ uint16_t col_dark_grey = color565(65, 65, 65);
 uint16_t col_white = color565(150, 150, 150);
 uint16_t col_bright_white = color565(180, 180, 180);
 
-uint8_t blue_grey[3] = {30, 35, 40};  // {30, 35, 40}
+uint8_t blue_grey[3] = {7, 25, 46};  // {30, 35, 40}
 uint8_t blue[3] = {86, 162, 237};
 
 MatrixPanel_I2S_DMA *matrix = nullptr;
 VirtualMatrixPanel *dma_display = nullptr;
+
+void gen_brightness_reorder();
 
 void display_init() {
   HUB75_I2S_CFG mxconfig;
@@ -26,16 +30,21 @@ void display_init() {
   mxconfig.gpio.g1 = B1_PIN_DEFAULT;
   mxconfig.gpio.g2 = B2_PIN_DEFAULT;
   mxconfig.clkphase = false;
-  mxconfig.setPixelColorDepthBits(6);
+  mxconfig.setPixelColorDepthBits(8);
+  mxconfig.i2sspeed = HUB75_I2S_CFG::HZ_16M;
 
   matrix = new MatrixPanel_I2S_DMA(mxconfig);
-  // let's adjust default brightness to about 75%
+
+  Serial.printf("Actual I2S clock: %d Hz\n", mxconfig.i2sspeed);
 
   // Allocate memory and start DMA display
   if (not matrix->begin())
     Serial.println("****** !KABOOM! I2S memory allocation failed ***********");
 
   matrix->setBrightness8(brightness);  // range is 0-255, 0 - 0%, 255 - 100%
+
+  Serial.printf("calculated_refresh_rate: %d Hz\n",
+                matrix->calculated_refresh_rate);
 
   dma_display = new VirtualMatrixPanel((*matrix), 1, 2, PANEL_WIDTH,
                                        PANEL_HEIGHT, CHAIN_TOP_LEFT_DOWN);
@@ -58,7 +67,7 @@ void display_init() {
   delay(300);
 
   Serial.println("Fill screen: Neutral White");
-  dma_display->fillScreenRGB888(140, 140, 140);
+  dma_display->fillScreenRGB888(144, 144, 144);
   delay(300);
 
   Serial.println("Fill screen: black");
@@ -70,6 +79,8 @@ void display_init() {
   //   Serial.printf("refresh:%d bits:%d\n",
   //   dma_display->calculated_refresh_rate,
   // 0);
+
+  gen_brightness_reorder();
 }
 
 volatile int line_y_pos;
@@ -95,6 +106,43 @@ void drewLine() {
 //     drew_background_pixel(x, y);
 //   }
 // }
+
+// fix binary-code modulation (rgb(193,0,0) is brighter than rgb(194,0,0)) also
+// 145 brighter that 146
+uint8_t brightness_reorder[255];
+void gen_brightness_reorder() {
+  int coll_offset_1l = 18;  // 19
+  int coll_offset_1h = 13;  // 16
+
+  int coll_offset_2l = 25;
+  int coll_offset_2h = 24;
+
+  int coll_offset = 22;
+  int pivot1 = 145;  // the wrong difference is bettween 145 and 146
+  int pivot2 = 193;  // the wrong difference is bettween 193 and 194
+  for (int i = 0; 256 > i; i++) {
+    if ((i < pivot1 && i > pivot1 - coll_offset_1l))
+      brightness_reorder[i] = i + coll_offset_1l;
+    else if (i > pivot1 && i < pivot1 + coll_offset_1h)
+      brightness_reorder[i] = i - coll_offset_1h;
+
+    else if ((i > pivot2 && i < pivot2 + coll_offset_2h)) {
+      brightness_reorder[i] = i - coll_offset_2h;
+    } else if ((i < pivot2 && i > pivot2 - coll_offset_2l)) {
+      brightness_reorder[i] = i + coll_offset_2l;
+    } else
+      brightness_reorder[i] = i;
+  }
+}
+
+void print_pixel(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b) {
+  r = brightness_reorder[r];
+  g = brightness_reorder[g];
+  b = brightness_reorder[b];
+
+  update__small_num((r > 0 ? r : 0), 120, 45, col_white);
+  dma_display->drawPixelRGB888(x, y, r, g, b);
+}
 
 void print_back_ground() {
   for (int y = 0; PANE_HEIGHT > y; y++) {

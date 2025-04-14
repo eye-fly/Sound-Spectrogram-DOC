@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-#define MAX_NON_ZERO_SAMPLES 384
 float windowValues[MAX_NON_ZERO_SAMPLES];
 void preprocess_windowing(unsigned int non_zero_samples) {
   for (int i = 0; i < non_zero_samples; i++) {
