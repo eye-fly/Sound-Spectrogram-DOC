@@ -63,7 +63,7 @@ void core1_tast(void* pvParameters) {
       times_max = max(times_max, p_time);
       times_i++;
       if (times_i == n_times) {
-        display_update_avg_ms = times_sum / n_times;
+        display_update_avg_ms = max(0, times_sum / n_times);
         display_update_max_ms = times_max;
         times_sum = 0;
         times_max = 0;
