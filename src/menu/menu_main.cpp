@@ -26,7 +26,69 @@ void menu_init() {
 // TODO: add dim line colur so its acts dimnamicly (but check how it affect
 // preformance)
 
-void menu_setup() {
+// void menu_setup() {
+//   mainMenu.listCOntent.push_back(new PopupMenu(
+//       "Save changes", "Save changes?", []() { mainMenu.save_changes(); }));
+//   mainMenu.listCOntent.push_back(
+//       new PopupMenu("Reverse changes", "Reverse changes?",
+//                     []() { mainMenu.reverse_changes(); }));
+//   mainMenu.listCOntent.push_back(
+//       new PopupMenu("Restore default", "Restore default?",
+//                     []() { mainMenu.restore_default(); }));
+
+//   soundMenu.listCOntent.push_back(
+//       new MenuItem("FFT non0 samp", &non_zero_samples, 2,
+//       MAX_NON_ZERO_SAMPLES,
+//                    1, []() { preprocess_windowing(non_zero_samples); }));
+//   soundMenu.listCOntent.push_back(
+//       new MenuItem("volume anj", &volue_adjustment, 1, 100));
+//   soundMenu.listCOntent.push_back(
+//       new MenuItem("use log scale", &use_log_scale, 0, 3));
+//   soundMenu.listCOntent.push_back(new MenuItem("max f", &display_max_f,
+//   200,1000,25)); soundMenu.listCOntent.push_back(
+//       new MenuItem("en voc ch", &enable_voc_channel, 0, 1));
+
+//   displayMenu.listCOntent.push_back(
+//       new ListMenu("flame eff opt",
+//                    {new ColorSelectMenu("center col", 41, 198, 89,
+//                                         mix_flame_C_col, &mix_C_col),
+//                     new MenuItem("en eff", &falame_colour_enable, 0, 1, 1,
+//                                  []() { prindColourSample(&mix_C_col); }),
+//                     new MenuItem("eff grad", &flame_gradient_len, 1, 20, 1,
+//                                  []() { prindColourSample(&mix_C_col); }),
+//                     new MenuItem("eff offset", &flame_gradd_offset, 0, 10, 1,
+//                                  []() { prindColourSample(&mix_C_col); })},
+//                    []() { prindColourSample(&mix_C_col); }));
+
+//   displayMenu.listCOntent.push_back(
+//       new MenuItem("brightness", &brightness, 1, 255, 8,
+//                    []() { matrix->setBrightness8(brightness); }));
+//   displayMenu.listCOntent.push_back(
+//       new MenuItem("mirror", &miror, 0, 1, 1, []() {
+//         if (miror) {
+//           drewLine(PANE_HEIGHT / 2);
+//         } else {
+//           drewLine(PANE_HEIGHT - 1);
+//         }
+//         print_back_ground();
+//       }));
+
+//   displayMenu.listCOntent.push_back(
+//       new ColorSelectMenu("voc col", 99, 175, 89, voice_C_col,
+//       &voice_C_col));
+//   displayMenu.listCOntent.push_back(
+//       new ColorSelectMenu("mix col", 5, 222, 112, mix_C_col));  // 6
+// }
+
+template <typename T>
+void addMenuItem(
+    ListMenu& menu, const char* title, volatile T* value, T min, T max,
+    T step = 1, std::function<void()> callback = []() {}) {
+  menu.listCOntent.push_back(
+      new MenuItem(title, value, min, max, step, callback));
+}
+
+void setupMainMenu() {
   mainMenu.listCOntent.push_back(new PopupMenu(
       "Save changes", "Save changes?", []() { mainMenu.save_changes(); }));
   mainMenu.listCOntent.push_back(
@@ -35,19 +97,22 @@ void menu_setup() {
   mainMenu.listCOntent.push_back(
       new PopupMenu("Restore default", "Restore default?",
                     []() { mainMenu.restore_default(); }));
+}
 
-  soundMenu.listCOntent.push_back(
-      new MenuItem("FFT non0 samp", &non_zero_samples, 2, MAX_NON_ZERO_SAMPLES,
-                   1, []() { preprocess_windowing(non_zero_samples); }));
-  soundMenu.listCOntent.push_back(
-      new MenuItem("volume anj", &volue_adjustment, 1, 100));
-  soundMenu.listCOntent.push_back(
-      new MenuItem("use log scale", &use_log_scale, 0, 3));
-  soundMenu.listCOntent.push_back(new MenuItem("max f", &display_max_f, 200,1000,25));
-  soundMenu.listCOntent.push_back(
-      new MenuItem("en voc ch", &enable_voc_channel, 0, 1));
+void setupSoundMenu() {
+  // FFT and volume settings
+  addMenuItem(soundMenu, "FFT non0 samp", &non_zero_samples, 2,
+              MAX_NON_ZERO_SAMPLES, 1,
+              []() { preprocess_windowing(non_zero_samples); });
+  addMenuItem(soundMenu, "volume anj", &volue_adjustment, 1, 100);
+  addMenuItem(soundMenu, "use log scale", &use_log_scale, 0, 3);
+  addMenuItem(soundMenu, "max f", &display_max_f, 200, 1000, 25);
+  addMenuItem(soundMenu, "en voc ch", &enable_voc_channel, 0, 1);
+}
 
-  displayMenu.listCOntent.push_back(
+void setupDisplayMenu() {
+  // Flame effect submenu
+  auto flameSubMenu =
       new ListMenu("flame eff opt",
                    {new ColorSelectMenu("center col", 41, 198, 89,
                                         mix_flame_C_col, &mix_C_col),
@@ -57,25 +122,32 @@ void menu_setup() {
                                  []() { prindColourSample(&mix_C_col); }),
                     new MenuItem("eff offset", &flame_gradd_offset, 0, 10, 1,
                                  []() { prindColourSample(&mix_C_col); })},
-                   []() { prindColourSample(&mix_C_col); }));
+                   []() { prindColourSample(&mix_C_col); });
 
-  displayMenu.listCOntent.push_back(
-      new MenuItem("brightness", &brightness, 1, 255, 8,
-                   []() { matrix->setBrightness8(brightness); }));
-  displayMenu.listCOntent.push_back(
-      new MenuItem("mirror", &miror, 0, 1, 1, []() {
-        if (miror) {
-          drewLine(PANE_HEIGHT / 2);
-        } else {
-          drewLine(PANE_HEIGHT - 1);
-        }
-        print_back_ground();
-      }));
+  displayMenu.listCOntent.push_back(flameSubMenu);
 
+  // Display settings
+  addMenuItem(displayMenu, "brightness", &brightness, 1, 255, 8,
+              []() { matrix->setBrightness8(brightness); });
+  addMenuItem(displayMenu, "miror", &miror, 0, 1, 1, []() {
+    if (miror)
+      drewLine(PANE_HEIGHT / 2);
+    else
+      drewLine(PANE_HEIGHT - 1);
+    print_back_ground();
+  });
+
+  // Color settings
   displayMenu.listCOntent.push_back(
       new ColorSelectMenu("voc col", 99, 175, 89, voice_C_col, &voice_C_col));
   displayMenu.listCOntent.push_back(
-      new ColorSelectMenu("mix col", 5, 222, 112, mix_C_col));  // 6
+      new ColorSelectMenu("mix col", 5, 222, 112, mix_C_col));
+}
+
+void menu_setup() {
+  setupMainMenu();
+  setupSoundMenu();
+  setupDisplayMenu();
 }
 
 bool start = 0;

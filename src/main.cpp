@@ -10,6 +10,7 @@
 #include "display.h"
 #include "esp_heap_caps.h"
 #include "esp_task_wdt.h"
+#include "fft/cache.h"
 #include "fft/display.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -75,6 +76,15 @@ void core1_tast(void* pvParameters) {
   }
 }
 
+void print_memory_info() {
+  Serial.printf("Internal free: %d bytes\n",
+                heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+  Serial.printf("PSRAM free: %d bytes\n",
+                heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+  Serial.printf("Largest PSRAM block: %d bytes\n",
+                heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+}
+
 void setup() {
   Serial.begin(921600);  // Start serial communication for debugging
   mutex = xSemaphoreCreateMutex();
@@ -103,6 +113,10 @@ void setup() {
   // Serial.println(free_dma_memory);
   // // i2s_init(); // Initialize I2S to generate clocks
 
+  // print_memory_info();
+  // initPSRAMTable();  // TODO: move to appropratie place
+  // print_memory_info();
+  // =======================
   audio_master();
 }
 
@@ -179,6 +193,25 @@ void fft(float* fftIn, double* downsampleBuffer, int downsampleBuffer_i) {
   fft_execute(fft_analysis);
 }
 
+inline uint8_t CalAproxymateYValueFFTOut(int x, int channel, float boost) {
+  const int max_bucket = (SAMPLES / 2) * display_max_f / (DOWNSAMPLE_RATE / 2);
+  const int fft_bucket = max_bucket * x / PANE_WIDTH;
+  const float sqew = 1.0 - ((1.0 * max_bucket * x / PANE_WIDTH) - fft_bucket);
+  const float* fft_data = fftOut[fftOut_reading][channel];
+  float crr_y = (PANE_HEIGHT * (fft_data[fft_bucket] * sqew));
+  crr_y += (PANE_HEIGHT * (fft_data[fft_bucket + 1] * (1.0 - sqew)));
+  crr_y = (crr_y * boost) / 8.0f;
+
+  uint8_t crr_y_int = static_cast<uint8_t>(crr_y);
+  crr_y_int = (crr_y_int <= 1) ? 0 : (crr_y_int - 1);
+  return (crr_y_int >= PANEL_HEIGHT - 1) ? PANEL_HEIGHT - 1 : crr_y_int;
+
+  // uint8_t crr_y_int = crr_y;
+  // crr_y_int = max(0, crr_y_int - 1);
+  // crr_y_int = min(static_cast<uint8_t>(PANEL_HEIGHT - 1), crr_y_int);
+  // return crr_y_int;
+}
+
 void single_channel_process_aux(int channel_nr, int fft_array_i,
                                 int fft_chanel_out, int32_t* filterBuffer,
                                 int* downsampleCounter, double* downsampleValue,
@@ -215,6 +248,8 @@ void single_channel_process_aux(int channel_nr, int fft_array_i,
       fftOut[nr][fft_chanel_out][i] =
           log(0.65 * fftOut[nr][fft_chanel_out][i] + 1) * 2.6;
     }
+
+    // CalAproxymateYValueFFTOut()
   }
 }
 
@@ -267,7 +302,7 @@ void audio_process() {
         }
 
         single_channel_process_mix(nr);  // mix channel
-        single_channel_process_voc(nr);  // voc channel
+        // single_channel_process_voc(nr);  // voc channel
         fftOut_avaiable = nr;
         xSemaphoreGive(mutex);  // Release the mutex
       }
@@ -334,117 +369,13 @@ void audio_master() {
   audio_process();
 }
 
-int display_period = 0;
-int x_max = PANE_WIDTH;
-inline int GetAproxymateYValueFFTOut(int x, int channel, float boost) {
-  int max_bucket = (SAMPLES / 2) * display_max_f / (DOWNSAMPLE_RATE / 2);
-  int fft_bucket = max_bucket * x / PANE_WIDTH;
-  double sqew = 1.0 - ((1.0 * max_bucket * x / PANE_WIDTH) - fft_bucket);
-  double crr_y =
-      (PANE_HEIGHT * (fftOut[fftOut_reading][channel][fft_bucket] * sqew));
-  crr_y += (PANE_HEIGHT *
-            (fftOut[fftOut_reading][channel][fft_bucket + 1] * (1.0 - sqew)));
-  crr_y *= boost;
-  crr_y /= 8;
-
-  int crr_y_int = crr_y;
-  crr_y_int = max(0, crr_y_int - 1);
-  crr_y_int = min(PANEL_HEIGHT - 1, crr_y_int);
-  return crr_y_int;
-}
-
-int16_t f_left[PANE_HEIGHT];
-int16_t f_right[PANE_WIDTH][PANE_HEIGHT];
-inline void CalkDym(int channel) {
-  // Left
-  for (int y = 1; y < PANEL_HEIGHT; y++) {
-    f_left[y] = 0;
-    f_right[PANE_WIDTH - 1][y] == 0;
-  }
-  // right
-  int crr_y;
-  for (int i = PANE_WIDTH - 2; i >= 0; i--) {
-    crr_y = GetAproxymateYValueFFTOut(i, channel, 1.0);
-
-    for (int y = 1; y <= crr_y; y++) {
-      if (i < PANE_WIDTH - 1) {
-        f_right[i][y] = f_right[i + 1][y] + 1;
-      }
-    }
-
-    for (int y = crr_y + 1; y < PANEL_HEIGHT; y++) {
-      if (i > 0) {
-        if (f_right[i][y] == 0) break;
-        f_right[i][y] = 0;
-      }
-    }
-  }
-}
-
-inline void UpdateDisplay_deactivate_channel(bool mirror, int y_start, int x,
-                                             int crr_y,
-                                             int* display_last_y_pos) {
-  for (int y = display_last_y_pos[x]; y > crr_y; y--) {
-    int display_y_flip = PANEL_HEIGHT - 1 - y_start - y;
-    int display_y_normal = y_start + y;
-
-    if (mirror) {
-      drew_background_pixel(x, display_y_normal);
-      display_y_flip++;
-    }
-    drew_background_pixel(x, display_y_flip);
-  }
-  display_last_y_pos[x] = crr_y;
-}
-
-// int red_val, green_val, blue_val;
-inline void UpdateDisplay_activate_channel(bool mirror, int y_display_start,
-                                           int minimal_y, int x, int crr_y,
-                                           RGB col, bool use_flame) {
-  int display_x, display_y_normal, display_y_flip;
-  RGB crr_col = col;
-  int toYellow;
-  // CalkDym(0);
-
-  display_x = x;
-
-  for (int y = minimal_y; y <= crr_y; y++) {
-    if (use_flame) {
-      f_left[y]++;
-
-      crr_col = flameMix(col, y, min(f_left[y], f_right[x][y]));
-    }
-
-    display_y_flip = PANEL_HEIGHT - 1 - y_display_start - y;
-    display_y_normal = y_display_start + y;
-
-    // float brs = 1.0 * brightness / 50;
-    // int r = brightness * (140 - (toYellow / 4)) / 50;
-
-    if (mirror) {
-      dma_display->drawPixelRGB888(display_x, display_y_normal, crr_col.r,
-                                   crr_col.g, crr_col.b);
-      display_y_flip++;
-    }
-
-    dma_display->drawPixelRGB888(display_x, display_y_flip, crr_col.r,
-                                 crr_col.g, crr_col.b);
-
-    // uint16_t col;
-    // dma_display->drawPixel(display_x, display_y, col);
-  }
-  if (use_flame) {
-    for (int y = crr_y + 1; PANEL_HEIGHT > y; y++) {
-      f_left[y] = 0;
-    }
-  }
-}
-
 inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
-  static int display_last_y_pos_mix[PANE_WIDTH];
-  static int display_last_y_pos_voc[PANE_WIDTH];
-  int crr_y_mix;
-  int crr_y_voc;
+  static u_int8_t display_last_y_pos_mix[PANE_WIDTH];
+  static u_int8_t display_last_y_pos_voc[PANE_WIDTH];
+
+  static Context ctx = Context(
+      0, 0, PANE_WIDTH, [](int x) { return 0; }, [](int x) { return 0; },
+      display_last_y_pos_mix, display_last_y_pos_voc);
 
   bool new_frame = false;
   if (xSemaphoreTake(mutex, xBlockTime) == pdTRUE) {
@@ -457,58 +388,31 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
     //============
 
     if (new_frame) {
-      bool flame;
-      if (falame_colour_enable) {
-        flame = true;
-        CalkDym(0);
+      int channel = 0;
+      static uint8_t y_vals[PANE_WIDTH];
+      static uint8_t y_voc_vals[PANE_WIDTH];
+
+      for (int16_t x = 0; ctx.x_len > x; x++) {
+        y_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1);
+        // y_vals[x] = CalAproxymateYValueFFTOutPreComp(x, channel, 1);
+      }
+      ctx.y_f_mix = [&y_vals](int x) { return y_vals[x]; };
+
+      // voc
+      if (enable_voc_channel) {
+        channel = 1;
+
+        for (int16_t x = 0; ctx.x_len > x; x++) {
+          y_voc_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1.2);
+        }
+        ctx.y_f_voc = [&y_voc_vals](int x) { return y_voc_vals[x]; };
+
       } else {
-        flame = false;
+        ctx.y_f_voc = [](int x) { return uint8_t(0); };
       }
 
-      for (int x = 0; x < x_max; x++) {
-        crr_y_mix = GetAproxymateYValueFFTOut(x, 0, 1.0);
-
-        if (enable_voc_channel && x > 32) {
-          crr_y_voc = GetAproxymateYValueFFTOut(x, 1, 1.25);
-        } else {
-          crr_y_voc = 0;
-        }
-
-        UpdateDisplay_deactivate_channel(mirror, y_start, x,
-                                         max(crr_y_mix, crr_y_voc),
-                                         display_last_y_pos_mix);
-
-        // float sat_m = 1.3;
-        // red_val = 140 * sat_m;
-        // green_val = 50 * sat_m;
-        // blue_val = 12 * sat_m;
-
-        if (x > 32) {
-          if (crr_y_voc == 0 && display_last_y_pos_voc[x] > 0) {
-            dma_display->drawPixelRGB888(
-                x, PANE_HEIGHT - 1, (mix_C_col.r), (mix_C_col.g),
-                (mix_C_col.b));  /// TODO add proper method so
-                                 /// mirror works properly
-          }
-          display_last_y_pos_voc[x] = crr_y_voc;
-          // UpdateDisplay_deactivate_channel(mirror, y_start, x, crr_y_voc,
-          //                                  display_last_y_pos_voc);
-        }
-
-        UpdateDisplay_activate_channel(mirror, y_start, crr_y_voc + 1, x,
-                                       crr_y_mix, mix_C_col, flame);
-
-        if (x > 32) {
-          UpdateDisplay_activate_channel(mirror, y_start, 1, x, crr_y_voc,
-                                         voice_C_col, false);
-          if (crr_y_voc > 0) {
-            dma_display->drawPixelRGB888(
-                x, PANE_HEIGHT - 1, voice_C_col.r, voice_C_col.g,
-                voice_C_col.b);  /// TODO add proper method so
-                                 /// mirror works properly
-          }
-        }
-      }
+      // TODO: mirror
+      update_fft_display(false, &ctx);
     }
   }
   return new_frame;

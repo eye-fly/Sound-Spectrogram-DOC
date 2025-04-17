@@ -7,9 +7,9 @@ typedef struct rgb {
   uint8_t r, g, b;
 } RGB;
 
-inline RGB mix(RGB base_c, RGB mix_c, int ratio, int max_ratio) {
-  int base_ratio = max_ratio - ratio;
-  return {uint8_t((base_ratio * base_c.r + ratio * mix_c.r) /
+inline RGB mix(RGB base_c, RGB mix_c, int16_t ratio, int16_t max_ratio) {
+  int16_t base_ratio = max_ratio - ratio;
+  return {static_cast<uint8_t>((base_ratio * base_c.r + ratio * mix_c.r) /
                                max_ratio),
           static_cast<uint8_t>((base_ratio * base_c.g + ratio * mix_c.g) /
                                max_ratio),

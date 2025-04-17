@@ -1,10 +1,14 @@
 bugs:
-     it restarts afther a substaintial working time
+     it restarts afther a substaintial working time - meybe fixed
 
 
+
+0. use fft/cache.h ehen esp32-s3 is avaiable
 <!-- 0. allow saving changes permanently -->
-    there is problem with saving colors as all have same name in 'preferences'
+<!-- there is problem with saving colors as all have same name in 'preferences' -->
 1. set menu to be undestractable
+
+
 
 1.5. fix binary-code modulation (rgb(193,0,0) is brighter than rgb(194,0,0)) also 145 brighter that 146
 <!-- 2. display color in color change menu -->
@@ -28,6 +32,8 @@ bugs:
 
 
 4.1 choose better microcontroller (pobably ESP32-S3)
+    use of vectorized instructions
+
 
 
 5. check if wif avaiable/how much cost
