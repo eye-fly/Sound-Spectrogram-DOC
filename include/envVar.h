@@ -1,6 +1,8 @@
 #pragma once
 #include <Arduino.h>
 
+#include "display.h"
+
 #define MULT 2
 #define CHANNEL_NUMBER 2
 #define SAMPLE_RATE 10000  // 10 kHz sample rate
@@ -19,7 +21,7 @@
 
 // FFT
 #define SAMPLES \
-  (128 * MULT * 2)  //(256) // Number of samples (must be a power of 2)
+  (128 * MULT * 4)  //(256) // Number of samples (must be a power of 2)
 // #define ZERO_PADDING (145 + 256)  //(128+256)
 // #define WINNDOWING_RATIO 1.0
 // #define DCOFFSET 30420.0
@@ -41,7 +43,7 @@ extern volatile int enable_voc_channel;
 
 // double vReal[SAMPLES]; // Array for storing real part of the signal
 // double vImag[SAMPLES];
-extern float fftOut[3][CHANNEL_NUMBER][SAMPLES / 2];
+extern uint8_t fftOut[3][CHANNEL_NUMBER][PANE_WIDTH];
 extern int fftOut_reading;
 extern int fftOut_avaiable;
 

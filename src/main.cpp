@@ -193,13 +193,17 @@ void fft(float* fftIn, double* downsampleBuffer, int downsampleBuffer_i) {
   fft_execute(fft_analysis);
 }
 
-inline uint8_t CalAproxymateYValueFFTOut(int x, int channel, float boost) {
+inline uint8_t CalAproxymateYValueFFTOut(int x, float boost) {
   const int max_bucket = (SAMPLES / 2) * display_max_f / (DOWNSAMPLE_RATE / 2);
-  const int fft_bucket = max_bucket * x / PANE_WIDTH;
+  const int fft_bucket = (max_bucket * x / PANE_WIDTH);
+
   const float sqew = 1.0 - ((1.0 * max_bucket * x / PANE_WIDTH) - fft_bucket);
-  const float* fft_data = fftOut[fftOut_reading][channel];
-  float crr_y = (PANE_HEIGHT * (fft_data[fft_bucket] * sqew));
-  crr_y += (PANE_HEIGHT * (fft_data[fft_bucket + 1] * (1.0 - sqew)));
+
+  float crr_y =
+      (PANE_HEIGHT * (fft_analysis->output[(fft_bucket + 1) * 2] *
+                      sqew));  // +1)*2 because of wierd fftoutput structure
+  crr_y += (PANE_HEIGHT *
+            (fft_analysis->output[(fft_bucket + 2) * 2] * (1.0 - sqew)));
   crr_y = (crr_y * boost) / 8.0f;
 
   uint8_t crr_y_int = static_cast<uint8_t>(crr_y);
@@ -210,6 +214,26 @@ inline uint8_t CalAproxymateYValueFFTOut(int x, int channel, float boost) {
   // crr_y_int = max(0, crr_y_int - 1);
   // crr_y_int = min(static_cast<uint8_t>(PANEL_HEIGHT - 1), crr_y_int);
   // return crr_y_int;
+}
+
+inline float fast_log(float x) {
+  // Fast log approximation (5-10x faster than natural log)
+  // Maximum error ~5% but good enough for visualization
+  union {
+    float f;
+    uint32_t i;
+  } vx = {x};
+  float y = vx.i;
+  y *= 1.1920928955078125e-7f;  // 1/2^23
+  return y - 126.94269504f;
+}
+inline float fast_log_0_9(float x) {
+  if (x <= 2.0f) return (x - 1.0f) * 0.693147f;  // log(1+x) ≈ x for x near 0
+  if (x <= 4.0f)
+    return 0.693147f + (x - 2.0f) * 0.405465f;  // log(2) + log(1 + (x-2)/2)
+  if (x <= 8.0f)
+    return 1.386294f + (x - 4.0f) * 0.223144f;  // log(4) + log(1 + (x-4)/4)
+  return 2.079441f + (x - 8.0f) * 0.117783f;    // log(8) + log(1 + (x-8)/8)
 }
 
 void single_channel_process_aux(int channel_nr, int fft_array_i,
@@ -226,10 +250,11 @@ void single_channel_process_aux(int channel_nr, int fft_array_i,
 
   int nr = fft_array_i;
   for (int i = 0; i < SAMPLES / 2; i++) {
-    fftOut[nr][fft_chanel_out][i] =
-        pow(fft_analysis->output[(i + 1) * 2], 2) +
-        pow(fft_analysis->output[(i + 1) * 2 + 1], 2);
-    fftOut[nr][fft_chanel_out][i] = sqrt(fftOut[nr][fft_chanel_out][i]);
+    int out_i = (i + 1) * 2;
+
+    fft_analysis->output[out_i] = pow(fft_analysis->output[out_i], 2) +
+                                  pow(fft_analysis->output[out_i + 1], 2);
+    fft_analysis->output[out_i] = sqrt(fft_analysis->output[out_i]);
 
     if (use_log_scale == 1) {
       // apparently fftout max is 8 -> then to the top of scrren
@@ -237,19 +262,22 @@ void single_channel_process_aux(int channel_nr, int fft_array_i,
       // fftOut[nr][i] = log(1 + fftOut[nr][i] * fftOut[nr][i]) * 1.5;
       // fftOut[nr][i] = log(0.15 * fftOut[nr][i] + 1) * 8.5;
 
-      fftOut[nr][fft_chanel_out][i] =
-          log(0.25 * fftOut[nr][fft_chanel_out][i] + 1) * 5.5;
+      // fft_analysis->output[out_i] =
+      //     log(0.25 * fft_analysis->output[out_i] + 1) * 5.5;
+      fft_analysis->output[out_i] =
+          fast_log_0_9(0.25 * fft_analysis->output[out_i] + 1) * 5.5;
     }
     if (use_log_scale == 2) {
-      fftOut[nr][fft_chanel_out][i] =
-          log(0.4 * fftOut[nr][fft_chanel_out][i] + 1) * 3.7;
+      fft_analysis->output[out_i] =
+          fast_log_0_9(0.4 * fft_analysis->output[out_i] + 1) * 3.7;
     }
     if (use_log_scale == 3) {
-      fftOut[nr][fft_chanel_out][i] =
-          log(0.65 * fftOut[nr][fft_chanel_out][i] + 1) * 2.6;
+      fft_analysis->output[out_i] =
+          fast_log_0_9(0.65 * fft_analysis->output[out_i] + 1) * 2.6;
     }
-
-    // CalAproxymateYValueFFTOut()
+  }
+  for (int x = 0; PANE_WIDTH > x; x++) {
+    fftOut[nr][fft_chanel_out][x] = CalAproxymateYValueFFTOut(x, 1);
   }
 }
 
@@ -392,24 +420,26 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
       static uint8_t y_vals[PANE_WIDTH];
       static uint8_t y_voc_vals[PANE_WIDTH];
 
-      for (int16_t x = 0; ctx.x_len > x; x++) {
-        y_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1);
-        // y_vals[x] = CalAproxymateYValueFFTOutPreComp(x, channel, 1);
-      }
-      ctx.y_f_mix = [&y_vals](int x) { return y_vals[x]; };
+      // for (int16_t x = 0; ctx.x_len > x; x++) {
+      //   y_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1);
+      //   // y_vals[x] = CalAproxymateYValueFFTOutPreComp(x, channel, 1);
+      // }
+      ctx.y_f_mix = [channel](int x) {
+        return fftOut[fftOut_reading][channel][x];
+      };
 
       // voc
-      if (enable_voc_channel) {
-        channel = 1;
+      // if (enable_voc_channel) {
+      //   channel = 1;
 
-        for (int16_t x = 0; ctx.x_len > x; x++) {
-          y_voc_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1.2);
-        }
-        ctx.y_f_voc = [&y_voc_vals](int x) { return y_voc_vals[x]; };
+      //   for (int16_t x = 0; ctx.x_len > x; x++) {
+      //     y_voc_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1.2);
+      //   }
+      //   ctx.y_f_voc = [&y_voc_vals](int x) { return y_voc_vals[x]; };
 
-      } else {
-        ctx.y_f_voc = [](int x) { return uint8_t(0); };
-      }
+      // } else {
+      //   ctx.y_f_voc = [](int x) { return uint8_t(0); };
+      // }
 
       // TODO: mirror
       update_fft_display(false, &ctx);

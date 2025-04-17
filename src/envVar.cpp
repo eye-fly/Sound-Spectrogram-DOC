@@ -15,7 +15,7 @@ volatile int enable_voc_channel = 0;
 
 // double vReal[SAMPLES]; // Array for storing real part of the signal
 // double vImag[SAMPLES];
-float fftOut[3][CHANNEL_NUMBER][SAMPLES / 2];
+uint8_t fftOut[3][CHANNEL_NUMBER][PANE_WIDTH];
 int fftOut_reading = -1;
 int fftOut_avaiable = 0;
 
