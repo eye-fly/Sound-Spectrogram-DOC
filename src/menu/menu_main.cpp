@@ -102,7 +102,7 @@ void setupMainMenu() {
 void setupSoundMenu() {
   // FFT and volume settings
   addMenuItem(soundMenu, "FFT non0 samp", &non_zero_samples, 2,
-              MAX_NON_ZERO_SAMPLES, 1,
+              MAX_NON_ZERO_SAMPLES, 5,
               []() { preprocess_windowing(non_zero_samples); });
   addMenuItem(soundMenu, "volume anj", &volue_adjustment, 1, 100);
   addMenuItem(soundMenu, "use log scale", &use_log_scale, 0, 3);

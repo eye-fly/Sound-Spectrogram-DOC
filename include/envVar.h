@@ -7,7 +7,7 @@
 #define CHANNEL_NUMBER 2
 #define SAMPLE_RATE 10000  // 10 kHz sample rate
 #define DOWNSAMPLE_RATE \
-  (350 * MULT * 2)  // 625    // Target sample rate (downsampled)
+  (500 * MULT * 2)  // 625    // Target sample rate (downsampled)
 #define DOWNSAMPLE_FACTOR \
   (SAMPLE_RATE / DOWNSAMPLE_RATE)  // Ratio for downsampling (5)
 #define BUFFER_SIZE \

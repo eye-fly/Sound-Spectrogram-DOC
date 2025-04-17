@@ -1,6 +1,6 @@
 #include "envVar.h"
 
-volatile int non_zero_samples = 217;  // 111
+volatile int non_zero_samples = 295;  // 111
 volatile int volue_adjustment = 25;
 volatile int use_log_scale = 3;
 volatile int display_max_f = 600;  // FFT_MAX_F;
