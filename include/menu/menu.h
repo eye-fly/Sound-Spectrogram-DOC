@@ -92,12 +92,14 @@ class MenuItem : public Menu {
   int encoder_pulse_multiple;
   int encoder_offset;
   std::function<void()> updateFun;
+  std::function<void()> auxDisplayFun;
   const char* pref_key;
 
  public:
   MenuItem(
       String n, volatile int* ref, int val_min = 0, int val_max = 256,
-      int scaler = 1, std::function<void()> fun = []() {});
+      int scaler = 1, std::function<void()> fun = []() {},
+      std::function<void()> displFun = []() {});
 
   // Value management
   void reverse_changes();

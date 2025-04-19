@@ -1,5 +1,6 @@
 #include "display.h"
 
+#include "menu/color.h"
 #include "menu/menu_aux.h"
 volatile int brightness = 180;
 
@@ -89,16 +90,17 @@ void drewLine(int y) {
   line_y_pos = y;
   for (int x = 0; x < PANE_WIDTH; x++) {
     // display_last_y_pos[x] = 0;
-    dma_display->drawPixelRGB888(x, y, 140, 40, 10);
+    dma_display->drawPixelRGB888(x, y, mix_C_col.r, mix_C_col.g, mix_C_col.b);
   }
 }
 void drewLine() {
   // clearLine()
   int y = line_y_pos;
-  for (int x = 0; x < PANE_WIDTH; x++) {
-    // display_last_y_pos[x] = 0;
-    dma_display->drawPixelRGB888(x, y, 140, 40, 10);
-  }
+  drewLine(line_y_pos);
+  // for (int x = 0; x < PANE_WIDTH; x++) {
+  //   // display_last_y_pos[x] = 0;
+  //   dma_display->drawPixelRGB888(x, y, col_mix.r, 40, 10);
+  // }
 }
 // void clearLine(int y) {
 //   for (int x = 0; x < PANE_WIDTH; x++) {

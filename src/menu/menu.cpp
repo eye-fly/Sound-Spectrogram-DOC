@@ -156,13 +156,15 @@ const char* next_key() {
 }
 
 MenuItem::MenuItem(String n, volatile int* ref, int val_min, int val_max,
-                   int scaler, std::function<void()> fun)
+                   int scaler, std::function<void()> fun,
+                   std::function<void()> displFun)
     : Menu(n),
       val(ref),
       val_min(val_min),
       val_max(val_max),
       encoder_pulse_multiple(scaler),
-      updateFun(fun) {
+      updateFun(fun),
+      auxDisplayFun(displFun) {
   defoult_val = (*val);
   preferences.begin("options", true);
   pref_key = strdup(next_key());
@@ -210,6 +212,7 @@ void MenuItem::update(int x, int y) {
     new_val = (new_val + *val > val_max) ? val_max - *val : new_val;
     (*val) += new_val;
     updateFun();
+    auxDisplayFun();
     print(x, y, col_bright_white);
   }
   if (frames_pressed > 2 && buttonPressed == 1) {

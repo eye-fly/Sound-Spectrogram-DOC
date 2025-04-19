@@ -429,17 +429,13 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
       };
 
       // voc
-      // if (enable_voc_channel) {
-      //   channel = 1;
+      if (enable_voc_channel) {
+        channel = 1;
 
-      //   for (int16_t x = 0; ctx.x_len > x; x++) {
-      //     y_voc_vals[x] = CalAproxymateYValueFFTOut(x, channel, 1.2);
-      //   }
-      //   ctx.y_f_voc = [&y_voc_vals](int x) { return y_voc_vals[x]; };
-
-      // } else {
-      //   ctx.y_f_voc = [](int x) { return uint8_t(0); };
-      // }
+        ctx.y_f_voc = [channel](int x) {
+          return fftOut[fftOut_reading][channel][x];
+        };
+      }
 
       // TODO: mirror
       update_fft_display(false, &ctx);

@@ -20,4 +20,14 @@ float get_fft_resoult(fft_config_t *fft_analysis, int i) {
 }
 
 // Returns PDF of normal distribution with max value of 1
-float normalPDF(float x) { return exp(-25 * x * x); }
+float normalPDF(float x) { return exp(-4 * x * x); }
+
+float flatPDF(float x) {
+  x = x * x;
+  return exp(-4 * x * x);
+}
+
+// idea is to to center pdf that has most cululative probability in [-1,1]
+float centerPDF(int x, int max_x, std::function<float(float)> PDF) {
+  return PDF((1.0 * x / (max_x / 2)) - 1);
+}
