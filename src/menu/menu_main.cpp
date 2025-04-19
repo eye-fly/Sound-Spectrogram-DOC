@@ -89,7 +89,7 @@ void setupDisplayMenu() {
   displayMenu.listCOntent.push_back(
       new ColorSelectMenu("voc col", 99, 175, 89,
                           voice_C_col));  // TODO: change so correct
-                                          // (voice)colur is displayd (not mix)
+  // (voice)colur is displayd (notmix)
   displayMenu.listCOntent.push_back(new ColorSelectMenu(
       "mix col", 5, 222, 112, mix_C_col, []() { drewLine(); }));
 }

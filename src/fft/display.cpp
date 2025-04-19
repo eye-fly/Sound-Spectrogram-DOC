@@ -20,46 +20,64 @@ class Effects {
 
 Effects effects;
 
-inline void UpdateDisplay_deactivate_channel(bool mirror, int y_start, int x,
+inline void UpdateDisplay_deactivate_channel(bool mirror, Context* ctx, int x,
                                              int crr_y,
                                              uint8_t* display_last_y_pos) {
-  for (int y = display_last_y_pos[x]; y > crr_y; y--) {
-    int display_y_flip = PANEL_HEIGHT - 1 - y_start - y;
-    int display_y_normal = y_start + y;
-
-    if (mirror) {
-      drew_background_pixel(x, display_y_normal);
-      display_y_flip++;
+  if (mirror) {
+    const int y_start = PANE_HEIGHT - 1 - ctx->y_mirror_start;
+    for (int y = display_last_y_pos[x]; y > crr_y; y--) {
+      drew_background_pixel(x, y_start + y);
+      drew_background_pixel(x, y_start - y);
     }
-    drew_background_pixel(x, display_y_flip);
+  } else {
+    const int y_start = PANE_HEIGHT - 1 - ctx->y_start;
+    for (int y = display_last_y_pos[x]; y > crr_y; y--) {
+      drew_background_pixel(x, y_start - y);
+    }
   }
   display_last_y_pos[x] = crr_y;
 }
 
-inline void UpdateDisplay_activate_channel(bool flip_y, Context* ctx,
+inline void UpdateDisplay_activate_channel(bool mirror, Context* ctx,
                                            int minimal_y, int x, int crr_y,
                                            RGB col) {
-  int display_x, display_y;
   RGB col_mix = col;
 
-  display_x = x + ctx->x_start;
+  const int16_t display_x = x + ctx->x_start;
 
-  for (int16_t y = minimal_y; y <= crr_y; y++) {
-    if (falame_colour_enable) {
-      effects.f_left[y] += static_cast<int16_t>(1);
+  if (mirror) {
+    const int display_y = PANE_HEIGHT - 1 - ctx->y_mirror_start;
 
-      col_mix = flameMix(col, y, min(effects.f_left[y], effects.f_right[x][y]));
+    for (int16_t y = minimal_y; y <= crr_y; y++) {
+      if (falame_colour_enable) {
+        effects.f_left[y] += static_cast<int16_t>(1);
+
+        col_mix =
+            flameMix(col, y, min(effects.f_left[y], effects.f_right[x][y]));
+      }
+
+      // if (flip_y) {
+      //   display_y = ctx->y_start + y;
+      //   print_pixel(display_x, display_y, col_mix.r, col_mix.g, col_mix.b);
+      //   // display_y_flip++;
+      // } else {
+      print_pixel(display_x, display_y - y, col_mix.r, col_mix.g, col_mix.b);
+      print_pixel(display_x, display_y + y, col_mix.r, col_mix.g, col_mix.b);
+      // }
     }
+  } else {
+    const int16_t display_y = PANEL_HEIGHT - 1 - ctx->y_start;
 
-    if (flip_y) {
-      display_y = ctx->y_start + y;
-      dma_display->drawPixelRGB888(display_x, display_y, col_mix.r, col_mix.g,
-                                   col_mix.b);
-      // display_y_flip++;
-    } else {
-      display_y = PANEL_HEIGHT - 1 - ctx->y_start - y;
-      dma_display->drawPixelRGB888(display_x, display_y, col_mix.r, col_mix.g,
-                                   col_mix.b);
+    for (int16_t y = minimal_y; y <= crr_y; y++) {
+      if (falame_colour_enable) {
+        effects.f_left[y] += static_cast<int16_t>(1);
+
+        col_mix =
+            flameMix(col, y, min(effects.f_left[y], effects.f_right[x][y]));
+      }
+
+      // display_y = PANEL_HEIGHT - 1 - ctx->y_start - y;
+      print_pixel(display_x, display_y - y, col_mix.r, col_mix.g, col_mix.b);
     }
   }
 
@@ -108,14 +126,12 @@ void update_fft_display(bool flip_y, Context* ctx) {
       crr_y_voc = ctx->y_f_voc(x);
     }
 
-    UpdateDisplay_deactivate_channel(flip_y, ctx->y_start, x,
-                                     max(crr_y_mix, crr_y_voc),
+    UpdateDisplay_deactivate_channel(flip_y, ctx, x, max(crr_y_mix, crr_y_voc),
                                      ctx->display_last_y_pos_mix);
 
     if (crr_y_voc == 0 && ctx->display_last_y_pos_voc[x] > 0) {
-      dma_display->drawPixelRGB888(x, PANE_HEIGHT - 1, (mix_C_col.r),
-                                   (mix_C_col.g),
-                                   (mix_C_col.b));  /// TODO add proper
+      print_pixel(x, PANE_HEIGHT - 1, (mix_C_col.r), (mix_C_col.g),
+                  (mix_C_col.b));  /// TODO add proper
     }
 
     ctx->display_last_y_pos_voc[x] = crr_y_voc;
@@ -130,10 +146,9 @@ void update_fft_display(bool flip_y, Context* ctx) {
       crr_y_voc = ctx->y_f_voc(x);
 
       if (crr_y_voc > 0) {
-        dma_display->drawPixelRGB888(
-            x, PANE_HEIGHT - 1, voice_C_col.r, voice_C_col.g,
-            voice_C_col.b);  /// TODO add proper method
-                             /// so mirror works properly
+        print_pixel(x, PANE_HEIGHT - 1, voice_C_col.r, voice_C_col.g,
+                    voice_C_col.b);  /// TODO add proper method
+                                     /// so mirror works properly
       }
       UpdateDisplay_activate_channel(flip_y, ctx, 1, x, crr_y_voc, voice_C_col);
     }

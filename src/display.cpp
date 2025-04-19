@@ -10,7 +10,7 @@ uint16_t col_dark_grey = color565(65, 65, 65);
 uint16_t col_white = color565(150, 150, 150);
 uint16_t col_bright_white = color565(180, 180, 180);
 
-uint8_t blue_grey[3] = {7, 25, 46};  // {30, 35, 40}
+// uint8_t blue_grey[3] = {7, 25, 46};  // {30, 35, 40}
 uint8_t blue[3] = {86, 162, 237};
 
 MatrixPanel_I2S_DMA *matrix = nullptr;
@@ -50,10 +50,11 @@ void display_init() {
   dma_display = new VirtualMatrixPanel((*matrix), 1, 2, PANEL_WIDTH,
                                        PANEL_HEIGHT, CHAIN_TOP_LEFT_DOWN);
 
-  dma_display->fillScreen(dma_display->color444(0, 0, 0));
   dma_display->drawDisplayTest();
+  dma_display->fillScreen(dma_display->color444(0, 0, 0));
+}
 
-  delay(400);
+void display_startup() {
   // well, hope we are OK, let's draw some colors first :)
   Serial.println("Fill screen: RED");
   dma_display->fillScreenRGB888(160, 0, 0);
@@ -83,7 +84,6 @@ void display_init() {
 
   gen_brightness_reorder();
 }
-
 volatile int line_y_pos;
 void drewLine(int y) {
   // clearLine()
@@ -142,7 +142,7 @@ void print_pixel(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b) {
   g = brightness_reorder[g];
   b = brightness_reorder[b];
 
-  update__small_num((r > 0 ? r : 0), 120, 45, col_white);
+  // update__small_num((r > 0 ? r : 0), 120, 45, col_white);
   dma_display->drawPixelRGB888(x, y, r, g, b);
 }
 
@@ -156,27 +156,76 @@ void print_back_ground() {
   }
 }
 
-void fill_square(int x, int y, int size, uint8_t c[3]) {
+void fill_square(int x, int y, int size, RGB col) {
   for (int i = 0; i < size; i++) {
     for (int j = 0; j < size; j++) {
-      back_ground[x + i][y + j][0] = c[0];  // Red component
-      back_ground[x + i][y + j][1] = c[1];  // Green component
-      back_ground[x + i][y + j][2] = c[2];  // Blue component
+      back_ground[x + i][y + j][0] = col.r;  // Red component
+      back_ground[x + i][y + j][1] = col.g;  // Green component
+      back_ground[x + i][y + j][2] = col.b;  // Blue component
     }
   }
 }
+
+void line_h(int x, int y, int len, RGB col) {
+  for (int rect_y = 0; len > rect_y; rect_y++) {
+    back_ground[x][y + rect_y][0] = col.r;
+    back_ground[x][y + rect_y][1] = col.g;
+    back_ground[x][y + rect_y][2] = col.b;
+  }
+}
+void line_v(int x, int y, int len, RGB col) {
+  for (int i = 0; len > i; i++) {
+    back_ground[x + i][y][0] = col.r;
+    back_ground[x + i][y][1] = col.g;
+    back_ground[x + i][y][2] = col.b;
+  }
+}
+void empty_rectangle(int x, int y, int size, int wall_thikness, RGB col) {
+  for (int wall = 0; wall_thikness > wall; wall++) {
+    line_h(x + wall, y, size, col);
+    line_h(x + size - 1 - wall, y, size, col);
+
+    line_v(x, y + wall, size, col);
+    line_v(x, y + size - 1 - wall, size, col);
+  }
+}
+
 void generate_blue_rectangles() {
   // form down grey ones
   // randomSeed(analogRead(0)); // Use noise from an unconnected analog pin
-  for (int i = 1; (i + 1) < BCK_W; i += 3) {
+  int next_x;
+  for (int i = 1; (i + 1) < BCK_W;) {
     int endY = random(max(BCK_H / 2 - HALFPOINT_WIGGLE, 0),
                       min(BCK_H / 2 + HALFPOINT_WIGGLE, BCK_H - 1));
     int y = 1;
+    next_x = 3;
+
     while (y + 1 < endY) {
-      if (random(0, 100) > 75) {
+      if (random(0, 100) > 92) {
+        fill_square(i, y + 1, 2, rectangles_col);
+        y += 4;
+        // next_x = max(next_x, 4);
+      } else if (random(0, 100) > 75) {
         fill_square(i, y, 2, blue_grey);
+        y += 2;
+      } else {
+        y += 2;
       }
-      y += 2;
     }
+    i += next_x;
   }
+
+  // rectangles
+  // for (int i = 1; (i + 1) < BCK_W; i += 6) {
+  //   int endY = random(max(BCK_H / 2 - HALFPOINT_WIGGLE, 0),
+  //                     min(BCK_H / 2 + HALFPOINT_WIGGLE, BCK_H - 1));
+  //   int y = 1;
+  //   while (y + 1 < endY) {
+  //     if (random(0, 100) > 85) {
+  //       // empty_rectangle(i, y, 4, 1, rectangles_col);
+  //       y += 1;
+  //     }
+  //     y += 4;
+  //   }
+  // }
 }

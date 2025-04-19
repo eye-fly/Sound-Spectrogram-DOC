@@ -20,6 +20,10 @@ inline RGB mix(RGB base_c, RGB mix_c, int16_t ratio, int16_t max_ratio) {
 extern RGB voice_C_col;
 extern RGB mix_C_col;
 extern RGB mix_flame_C_col;
+
+extern RGB rectangles_col;
+extern RGB blue_grey;
+
 void prindColourSample(RGB *col);
 
 class ColorSelectMenu : public ListMenu {

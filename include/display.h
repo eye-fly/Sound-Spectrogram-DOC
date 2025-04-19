@@ -35,7 +35,7 @@ extern uint16_t col_dark_grey;
 extern uint16_t col_white;
 extern uint16_t col_bright_white;
 
-extern uint8_t blue_grey[3];
+// extern uint8_t blue_grey[3];
 extern uint8_t blue[3];
 
 void display_init();
@@ -46,6 +46,7 @@ void drewLine();
 void drewLine(int y);
 
 void display_init();
+void display_startup();
 
 void print_pixel(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b);
 

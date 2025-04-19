@@ -99,10 +99,12 @@ void setup() {
   // Serial.print("Free DMA-capable memory: ");
   // Serial.println(free_dma_memory);
   // // esp_intr_dump();
+
   display_init();
 
   menu_init();
   menu_setup();  // add itemes that change glabal variables
+  display_startup();
 
   xTaskCreatePinnedToCore(core1_tast, "i2UpdateDisplayVars_task", 2000, NULL, 1,
                           NULL, 0);
@@ -214,26 +216,6 @@ inline uint8_t CalAproxymateYValueFFTOut(int x, float boost) {
   // crr_y_int = max(0, crr_y_int - 1);
   // crr_y_int = min(static_cast<uint8_t>(PANEL_HEIGHT - 1), crr_y_int);
   // return crr_y_int;
-}
-
-inline float fast_log(float x) {
-  // Fast log approximation (5-10x faster than natural log)
-  // Maximum error ~5% but good enough for visualization
-  union {
-    float f;
-    uint32_t i;
-  } vx = {x};
-  float y = vx.i;
-  y *= 1.1920928955078125e-7f;  // 1/2^23
-  return y - 126.94269504f;
-}
-inline float fast_log_0_9(float x) {
-  if (x <= 2.0f) return (x - 1.0f) * 0.693147f;  // log(1+x) ≈ x for x near 0
-  if (x <= 4.0f)
-    return 0.693147f + (x - 2.0f) * 0.405465f;  // log(2) + log(1 + (x-2)/2)
-  if (x <= 8.0f)
-    return 1.386294f + (x - 4.0f) * 0.223144f;  // log(4) + log(1 + (x-4)/4)
-  return 2.079441f + (x - 8.0f) * 0.117783f;    // log(8) + log(1 + (x-8)/8)
 }
 
 void single_channel_process_aux(int channel_nr, int fft_array_i,
@@ -402,8 +384,8 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
   static u_int8_t display_last_y_pos_voc[PANE_WIDTH];
 
   static Context ctx = Context(
-      0, 0, PANE_WIDTH, [](int x) { return 0; }, [](int x) { return 0; },
-      display_last_y_pos_mix, display_last_y_pos_voc);
+      0, 0, PANE_HEIGHT / 2 - 1, PANE_WIDTH, [](int x) { return 0; },
+      [](int x) { return 0; }, display_last_y_pos_mix, display_last_y_pos_voc);
 
   bool new_frame = false;
   if (xSemaphoreTake(mutex, xBlockTime) == pdTRUE) {
@@ -438,7 +420,7 @@ inline bool UpdateDisplayVar(bool mirror, int y_start, int max_y) {
       }
 
       // TODO: mirror
-      update_fft_display(false, &ctx);
+      update_fft_display(miror, &ctx);
     }
   }
   return new_frame;

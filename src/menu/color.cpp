@@ -11,6 +11,9 @@ RGB voice_C_col = {27, 175, 89};
 RGB mix_C_col = {190, 70, 33};
 RGB mix_flame_C_col = {96, 166, 33};
 
+// background
+RGB rectangles_col = {7, 10, 40};
+RGB blue_grey = {7, 25, 46};
 // typedef struct hsl {
 //   float h, s, l;
 // } HSL;
@@ -136,8 +139,8 @@ void prindColourSample(RGB *col) {
   static u_int8_t display_last_y_pos_mix[max_x];
   static u_int8_t display_last_y_pos_voc[max_x];
   static Context ctx = Context(
-      10, 10, max_x, [](int x) { return 0; }, [](int x) { return 0; },
-      display_last_y_pos_mix, display_last_y_pos_voc);
+      5, 20, 20 + (max_y) / 2, max_x, [](int x) { return 0; },
+      [](int x) { return 0; }, display_last_y_pos_mix, display_last_y_pos_voc);
 
   ctx.y_f_mix = [](int x) {
     return 1.0 * max_y * 8 * 8 / PANE_HEIGHT *
