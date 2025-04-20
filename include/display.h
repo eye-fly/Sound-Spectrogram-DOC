@@ -5,6 +5,8 @@
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #include <stdint.h>
 
+#include "util/col.h"
+
 #define BCK_H 64
 #define BCK_W (128 * 2)
 
@@ -44,6 +46,7 @@ void generate_blue_rectangles();
 inline void drew_background_pixel(int x, int y);
 void drewLine();
 void drewLine(int y);
+void draw_line_v(int x, int y, int len, RGB col);
 
 void display_init();
 void display_startup();

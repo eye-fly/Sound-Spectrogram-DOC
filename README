@@ -1,5 +1,11 @@
 bugs:
      it restarts afther a substaintial working time - meybe fixed
+     it restarts afther changeing to usb-c pd
+
+NOW capable:
+names to states not only 0/1
+more than 1 language
+voice_en+mirror
 
 
 
@@ -20,7 +26,7 @@ check if current fix works if so then actualy use it!!!!!!!!!!
 
 3. more custom backgrounds - menu for choosing and adjusting
 
-3.5. colur pair presets
+<!-- 3.5. colur pair presets -->
 
 4. change to 60-50hz <<==looks like dog shit/ why???
     pritn hub75 display refresh rate

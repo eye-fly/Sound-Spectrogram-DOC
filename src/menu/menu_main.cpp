@@ -1,6 +1,6 @@
 #include "menu/menu_main.h"
 
-#include "util.h"
+#include "util/util.h"
 
 ListMenu soundMenu = ListMenu("sound Menu", {});
 ListMenu displayMenu = ListMenu("display Menu", {});
@@ -33,6 +33,13 @@ void addMenuItem(
   menu.listCOntent.push_back(
       new MenuItem(title, value, min, max, step, callback));
 }
+template <typename T>
+void addMenuItemOnOff(
+    ListMenu& menu, const char* title, volatile T* value, T min, T max,
+    T step = 1, std::function<void()> callback = []() {}) {
+  menu.listCOntent.push_back(new MenuItem(title, value, min, max, step,
+                                          callback, []() {}, {"Off", "On"}));
+}
 
 void setupMainMenu() {
   mainMenu.listCOntent.push_back(new PopupMenu(
@@ -53,7 +60,7 @@ void setupSoundMenu() {
   addMenuItem(soundMenu, "volume anj", &volue_adjustment, 1, 100);
   addMenuItem(soundMenu, "use log scale", &use_log_scale, 0, 3);
   addMenuItem(soundMenu, "max f", &display_max_f, 200, 1000, 25);
-  addMenuItem(soundMenu, "en voc ch", &enable_voc_channel, 0, 1);
+  addMenuItemOnOff(soundMenu, "en voc ch", &enable_voc_channel, 0, 1);
 }
 
 void setupDisplayMenu() {
@@ -63,7 +70,7 @@ void setupDisplayMenu() {
       {new ColorSelectMenu("center col", 41, 198, 89, mix_flame_C_col),
        new MenuItem(
            "en eff", &falame_colour_enable, 0, 1, 1, []() {},
-           []() { prindColourSample(&mix_C_col); }),
+           []() { prindColourSample(&mix_C_col); }, {"Off", "On"}),
        new MenuItem(
            "eff grad", &flame_gradient_len, 1, 20, 1, []() {},
            []() { prindColourSample(&mix_C_col); }),
@@ -77,7 +84,7 @@ void setupDisplayMenu() {
   // Display settings
   addMenuItem(displayMenu, "brightness", &brightness, 1, 255, 8,
               []() { matrix->setBrightness8(brightness); });
-  addMenuItem(displayMenu, "miror", &miror, 0, 1, 1, []() {
+  addMenuItemOnOff(displayMenu, "miror", &miror, 0, 1, 1, []() {
     if (miror)
       drewLine(PANE_HEIGHT / 2);
     else
@@ -113,7 +120,6 @@ void update_menu() {
       mainMenu.list_selected = 1;
 
       print_back_ground();  // TODO: maybe change to someting faster
-      drewLine();
     };
 
     start = 1;

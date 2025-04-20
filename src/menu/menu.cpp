@@ -157,14 +157,15 @@ const char* next_key() {
 
 MenuItem::MenuItem(String n, volatile int* ref, int val_min, int val_max,
                    int scaler, std::function<void()> fun,
-                   std::function<void()> displFun)
+                   std::function<void()> displFun, std::vector<String> labels)
     : Menu(n),
       val(ref),
       val_min(val_min),
       val_max(val_max),
       encoder_pulse_multiple(scaler),
       updateFun(fun),
-      auxDisplayFun(displFun) {
+      auxDisplayFun(displFun),
+      valueLabels(labels) {
   defoult_val = (*val);
   preferences.begin("options", true);
   pref_key = strdup(next_key());
@@ -195,7 +196,14 @@ void MenuItem::save_changes() {
 // ===============================
 
 void MenuItem::print(int x, int y, uint16_t col) {
-  text(name + " " + String(*val) + " ", x, y, col, col_black);
+  String valueText;
+
+  if (!valueLabels.empty() && *val >= 0 && *val < valueLabels.size()) {
+    valueText = valueLabels[*val];
+  } else {
+    valueText = String(*val);
+  }
+  text(name + " " + valueText + " ", x, y, col, col_black);
 }
 void MenuItem::print(int x, int y) { print(x, y, col_white); }
 void MenuItem::print_selected(int x, int y) {

@@ -1,5 +1,5 @@
 // #include <cmath>
-#include "util.h"
+#include "util/util.h"
 
 #include <Arduino.h>
 
@@ -18,8 +18,6 @@ float get_fft_resoult(fft_config_t *fft_analysis, int i) {
 
   return sqrt(po);
 }
-
-
 
 // Returns PDF of normal distribution with max value of 1
 float normalPDF(float x) { return exp(-4 * x * x); }

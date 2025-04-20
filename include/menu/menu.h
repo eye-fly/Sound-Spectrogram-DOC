@@ -84,6 +84,7 @@ extern volatile int def;  // Declaration of external variable
 class MenuItem : public Menu {
  private:
   volatile int* val;
+  std::vector<String> valueLabels;
   int defoult_val;
   int val_min;
   int val_max;
@@ -99,7 +100,8 @@ class MenuItem : public Menu {
   MenuItem(
       String n, volatile int* ref, int val_min = 0, int val_max = 256,
       int scaler = 1, std::function<void()> fun = []() {},
-      std::function<void()> displFun = []() {});
+      std::function<void()> displFun = []() {},
+      std::vector<String> labels = {});
 
   // Value management
   void reverse_changes();

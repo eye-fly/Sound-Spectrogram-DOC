@@ -1,6 +1,5 @@
 #include "display.h"
 
-#include "menu/color.h"
 #include "menu/menu_aux.h"
 volatile int brightness = 180;
 
@@ -148,12 +147,14 @@ void print_pixel(int16_t x, int16_t y, uint8_t r, uint8_t g, uint8_t b) {
 
 void print_back_ground() {
   for (int y = 0; PANE_HEIGHT > y; y++) {
-    if (y == line_y_pos) continue;
+    // if (y == line_y_pos) continue;
     for (int x = 0; PANE_WIDTH > x; x++) {
       dma_display->drawPixelRGB888(x, y, back_ground[x][y][0],
                                    back_ground[x][y][1], back_ground[x][y][2]);
     }
   }
+
+  if (line_y_pos >= 0 && PANE_HEIGHT > line_y_pos) drewLine();
 }
 
 void fill_square(int x, int y, int size, RGB col) {
@@ -166,14 +167,20 @@ void fill_square(int x, int y, int size, RGB col) {
   }
 }
 
-void line_h(int x, int y, int len, RGB col) {
+void draw_line_v(int x, int y, int len, RGB col) {
+  for (int i = 0; len > i; i++) {
+    print_pixel(x, y + i, col.r, col.g, col.b);
+  }
+}
+
+void line_v(int x, int y, int len, RGB col) {
   for (int rect_y = 0; len > rect_y; rect_y++) {
     back_ground[x][y + rect_y][0] = col.r;
     back_ground[x][y + rect_y][1] = col.g;
     back_ground[x][y + rect_y][2] = col.b;
   }
 }
-void line_v(int x, int y, int len, RGB col) {
+void line_h(int x, int y, int len, RGB col) {
   for (int i = 0; len > i; i++) {
     back_ground[x + i][y][0] = col.r;
     back_ground[x + i][y][1] = col.g;
