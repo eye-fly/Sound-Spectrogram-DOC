@@ -28,6 +28,9 @@ For the **HUB75 protocol** used to communicate with the LED display, the [ESP32-
 - **Dynamic Programming**
   - For certain simple visual effects, DP is used to significantly reduce computational complexity and improve performance.
 
+- **Preprocessing Data**
+  - When possible, Hanning window (constant values) and logarithmic scaling for display purposes (no high precision needed) are preprocessed to avoid long floating-point operations like `log` or `sin`.
+
 - **DMA (Direct Memory Access):**  
   - Drives the display without CPU usage. The CPU only changes pixel values in RAM when necessary, while DMA handles the rest.  
   - DMA is also used to receive data from the external ADC and store it in RAM, ready for processing in the next frame.
@@ -46,7 +49,28 @@ For the **HUB75 protocol** used to communicate with the LED display, the [ESP32-
   - *(Menu Preview: ![Menu](doc/menu.JPG))*
 
 ---
+## Project Structure
+```
+├── include/                     # Header files (global declarations)
+│   ├── envVar.h                # Main environment variables and definitions
+│   └── hardwarePins.h          # Hardware pin mappings for peripherals
 
+├── src/                         # Main application code
+│   ├── main.cpp                # Entry point for PlatformIO + some audio processing (to be moved)
+│   ├── display.cpp             # Implementation of LED matrix initialization and basic operations
+│
+│   ├── util/                   # Utility functions
+│   │   ├── col.cpp            # HSL/RGB conversion and color helper functions
+│   │   └── util.cpp           # Math helper functions
+│
+│   ├── menu/                   # User interface/menu implementation
+│
+│   └── fft/                    # FFT display and related optimizations
+│       ├── display.cpp        # Methods for displaying FFT on LED matrix
+│       └── cache.cpp          # Optimization routines for FFT/display rendering
+
+├── platformio.ini              # PlatformIO build configuration
+```
 ### Prototype:
 
 *Working Prototype: ![Prototype](doc/prototype.JPG)*
